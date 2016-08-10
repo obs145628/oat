@@ -3,11 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <pwd.h>
 #include "err.h"
 #include "str.h"
 #include "path.h"
+
 
 #define FS_BUFFER_LEN 1024
 static char _fsBuffer[FS_BUFFER_LEN];
@@ -220,4 +223,12 @@ void fsCopyDir(const char* src, const char* dst)
          free(dstSub);
       }
    }
+}
+
+char* fsHomePath()
+{
+   const char* home;
+   if((home =getenv("HOME")) == NULL)
+      home = getpwuid(getuid())->pw_dir;
+   return strClone(home);
 }

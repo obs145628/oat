@@ -125,4 +125,10 @@ void fsCopyDir(const char* src, const char* dst);
 
 
 
+/**
+ * Allocates a new string containing the home directory path
+ */
+char* fsHomePath();
+
+
 #endif //!FS_H_
