@@ -1,0 +1,69 @@
+#ifndef AST_VISITOR_HH_
+# define AST_VISITOR_HH_
+
+# include "ast-values.hh"
+# include "ast-operators.hh"
+# include "ast-statements.hh"
+# include "ast-functions.hh"
+# include "ast-modules.hh"
+
+class ASTVisitor
+{
+
+public:
+
+   virtual void visit(ASTInt* e);
+   virtual void visit(ASTDouble* e);
+   virtual void visit(ASTChar* e);
+   virtual void visit(ASTString* e);
+   virtual void visit(ASTTrue* e);
+   virtual void visit(ASTFalse* e);
+   virtual void visit(ASTNull* e);
+   virtual void visit(ASTSymbol* e);
+   virtual void visit(ASTSymbolValue* e);
+
+   virtual void visit(ASTOp1Plus* e);
+   virtual void visit(ASTOp1Minus* e);
+   virtual void visit(ASTOp2Plus* e);
+   virtual void visit(ASTOp2Minus* e);
+   virtual void visit(ASTOp2Mul* e);
+   virtual void visit(ASTOp2Div* e);
+   virtual void visit(ASTOp2Mod* e);
+   virtual void visit(ASTOpPreInc* e);
+   virtual void visit(ASTOpPreDec* e);
+   virtual void visit(ASTOpPostInc* e);
+   virtual void visit(ASTOpPostDec* e);
+   virtual void visit(ASTOpCall* e);
+   virtual void visit(ASTOpEq* e);
+   virtual void visit(ASTOpNeq* e);
+   virtual void visit(ASTOpGt* e);
+   virtual void visit(ASTOpLt* e);
+   virtual void visit(ASTOpGeq* e);
+   virtual void visit(ASTOpLeq* e);
+   virtual void visit(ASTOpLand* e);
+   virtual void visit(ASTOpLor* e);
+   virtual void visit(ASTOpLnot* e);
+   virtual void visit(ASTOpAssign* e);
+   virtual void visit(ASTOpPluseq* e);
+   virtual void visit(ASTOpMinuseq* e);
+   virtual void visit(ASTOpMuleq* e);
+   virtual void visit(ASTOpDiveq* e);
+   virtual void visit(ASTOpModeq* e);
+
+   virtual void visit(ASTStatementsBlock* e);
+   virtual void visit(ASTStatementEmpty* e);
+   virtual void visit(ASTStatementDefine* e);
+   virtual void visit(ASTStatementReturn* e);
+   virtual void visit(ASTStatementIf* e);
+   virtual void visit(ASTStatementWhile* e);
+
+   virtual void visit(ASTFunctionDef* e);
+
+   virtual void visit(ASTModule* e);
+
+private:
+
+   virtual void visitDefault(AST* ast);
+};
+
+#endif //!AST_VISITOR_HH_

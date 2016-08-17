@@ -1,8 +1,4 @@
-#include "unit.hh"
-
 #include <iostream>
-#include "str.hh"
-#include "token.hh"
 #include <stdexcept>
 #include "ast.hh"
 #include "expr-parser.hh"
@@ -10,41 +6,11 @@
 #include "statement-parser.hh"
 #include "file-parser.hh"
 #include "runner.hh"
-
-
-/*
-
-long exec(const AST* ast)
-{
-   if(ast->isOfType(TokenType::integer))
-      return ast->getValue().getInt();
-
-   else if(ast->isOfType(TokenType::op_plus) && ast->size() == 1)
-      return exec(ast->getChild(0));
-   else if(ast->isOfType(TokenType::op_minus) && ast->size() == 1)
-      return - exec(ast->getChild(0));
-
-   else if(ast->isOfType(TokenType::op_plus))
-      return exec(ast->getChild(0)) + exec(ast->getChild(1));
-   else if(ast->isOfType(TokenType::op_minus))
-      return exec(ast->getChild(0)) - exec(ast->getChild(1));
-   else if(ast->isOfType(TokenType::op_mul))
-      return exec(ast->getChild(0)) * exec(ast->getChild(1));
-   else if(ast->isOfType(TokenType::op_div))
-      return exec(ast->getChild(0)) / exec(ast->getChild(1));
-   else if(ast->isOfType(TokenType::op_mod))
-      return exec(ast->getChild(0)) % exec(ast->getChild(1));
-
-   else
-      throw std::runtime_error{"Unknown token type "
-            + ast->getValue().getTypeString() };
-}
-
-*/
+#include "unit.hh"
 
 #define BUILD_TREE 1
-#define CHECK_TOKENS 0
-#define RUN 1
+#define CHECK_TOKENS 1
+#define RUN 0
 
 int main()
 {
@@ -63,10 +29,10 @@ int main()
 
    if(CHECK_TOKENS)
    {
-      Unit unit("/home/obs/Documents/data.txt");
-      while(!unit.scanner().isEof())
+      Scanner scanner("/home/obs/Documents/data.txt");
+      while(!scanner.isEof())
       {
-         std::cout << unit.scanner().nextToken() << std::endl;
+         std::cout << scanner.nextToken() << std::endl;
       }
    }
 
