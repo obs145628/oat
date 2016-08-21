@@ -3,6 +3,7 @@
 #include "compiler.hh"
 #include "dot-tree.hh"
 
+#include "str.hh"
 
 #define DISPLAY_TOKENS 0
 #define COMPILE 1
@@ -18,7 +19,7 @@ int main()
 
    if(DISPLAY_TOKENS)
    {
-      Scanner scanner = Scanner::fromFile(SOURCE_MAIN);
+      Scanner scanner(SOURCE_MAIN);
       while(!scanner.isEof())
       {
          Token t = scanner.getToken();

@@ -408,14 +408,18 @@ void ASTVisitorInfos::visit(ASTModule*)
    _infos.desc = "module";
 }
 
-void ASTVisitorInfos::visit(ASTFunctionDef*)
+void ASTVisitorInfos::visit(ASTFunctionDef* e)
 {
    _infos.type = ASTType::function_def;
    _infos.desc = "function_def";
+   if(e->isExported())
+      _infos.desc += " (exported)";
 }
 
-void ASTVisitorInfos::visit(ASTGlobalDef*)
+void ASTVisitorInfos::visit(ASTGlobalDef* e)
 {
    _infos.type = ASTType::global_def;
    _infos.desc = "global_def";
+   if(e->isExported())
+      _infos.desc += " (exported)";
 }

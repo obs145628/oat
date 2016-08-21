@@ -9,15 +9,9 @@
 #include "ast-infos.hh"
 
 Compiler::Compiler(const std::string& path)
-   : _scanner(Scanner::fromFile(path))
+   : _parser(path)
 {
    buildTree();
-}
-
-Compiler::~Compiler()
-{
-   delete _state;
-   delete _ast;
 }
 
 DotTree* Compiler::buildDotTree() const
@@ -33,9 +27,8 @@ void Compiler::compileToPath(const std::string& path)
 
 void Compiler::buildTree()
 {
-   Parser parser(&_scanner);
-   _ast = parser.buildAST();
-   _state = new ASTState(_ast, &_scanner);
+   _ast = _parser.buildAST();
+   _state = new ASTState(_ast);
 }
 
 void Compiler::precheck()

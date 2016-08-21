@@ -5,7 +5,15 @@
 
 ASTFunctionDef* Parser::function_def()
 {
-   //symbol(name) "(" symbol(arg name),* ")" statement
+   //"export"? symbol(name) "(" symbol(arg name),* ")" statement
+   bool exported;
+   if(isTokenOfType(TokenType::kw_export))
+   {
+      exported = true;
+      next();
+   }
+   else
+      exported = false;
 
    Token t = getToken();
    if(!t.isOfType(TokenType::symbol))
@@ -44,5 +52,5 @@ ASTFunctionDef* Parser::function_def()
 
    next();
    ASTStatementsBlock* body = statement();
-   return new ASTFunctionDef(t, name, args, body, true, 0);
+   return new ASTFunctionDef(t, name, args, body, exported);
 }

@@ -8,9 +8,15 @@
 class Scanner
 {
 public:
-   Scanner(const std::string& label, const std::string& data);
 
-   static Scanner fromFile(const std::string& path);
+   Scanner(const std::string& path);
+
+   Scanner(const std::string& dir, const std::string& label,
+           const std::string& data);
+
+   std::string getDir() const;
+   std::string getLabel() const;
+   std::string getData() const;
 
    bool isEof() const;
    Token getToken() const;
@@ -22,6 +28,7 @@ public:
    void tokenError(Token t, const std::string& message);
 
 private:
+   std::string _dir;
    std::string _label;
    std::string _data;
    const char* _begin;
@@ -29,6 +36,8 @@ private:
    const char* _it;
    std::size_t _pos;
    std::vector<Token> _tokens;
+
+   static std::string readFile(const std::string& path);
 
    void readAll();
 

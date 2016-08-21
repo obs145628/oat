@@ -265,7 +265,8 @@ ASTStatementFor* Parser::statement_for()
    init = statement_body();
 
    if(isTokenOfType(TokenType::semicollon))
-      condition = new ASTTrue(Token("true", TokenType::kw_true,
+      condition = new ASTTrue(Token(getToken().getScanner(), "true",
+                                    TokenType::kw_true,
                                     getToken().getPosition()));
    else
       condition = expr();
@@ -275,7 +276,8 @@ ASTStatementFor* Parser::statement_for()
    next();
 
    if(isTokenOfType(TokenType::rparenthesis))
-      inc = new ASTNull(Token("null", TokenType::kw_null,
+      inc = new ASTNull(Token(getToken().getScanner(),  "null",
+                              TokenType::kw_null,
                               getToken().getPosition()));
    else
       inc = expr();

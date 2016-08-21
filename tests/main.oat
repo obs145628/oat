@@ -1,31 +1,12 @@
-let value = abs(-67);
+import "maths.oat";
 
 println(x)
 {
   print(x, "\n");
 }
 
-abs(x) => x > 0 ? x : -x;
-
-t2()
-{
-  value *= 2;
-}
-
 main()
 {
-  println("BEGIN");
-
-  let n = -1;
-
-  for(let n = 0; n <= 20; ++n)
-  {
-    if(n % 2)
-      continue;
-    println(n);
-  }
-
-  println(n);
-
-  println("END");
+  for(let i = 0; i < 10; ++i)
+    println(fact(i));
 }

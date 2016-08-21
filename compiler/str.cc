@@ -179,4 +179,30 @@ namespace str
 
       return oss.str();
    }
+
+   std::string dirname(const std::string& s)
+   {
+      size_t del_pos = s.find_last_of ('/');
+      if (del_pos == std::string::npos)
+         return ".";
+      else
+         return s.substr (0, del_pos);
+   }
+
+   std::string pathJoin(const std::string& a, const std::string& b)
+   {
+      if(b.empty())
+         return a;
+      if(b[0] == '/')
+         return b;
+
+      if(a.empty())
+         return b;
+
+      if(a[a.size() - 1] == '/')
+         return a + b;
+      else
+         return a + '/' + b;
+   }
+
 }

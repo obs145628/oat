@@ -535,6 +535,12 @@ void BinBuilder::addiFjump(const std::string& label,
    bin_builder_addi_fjump(_builder, getLabel(label), getLabel(addrLabel), saddr);
 }
 
+void BinBuilder::addiFcall(const std::string& label,
+                           t_vm_saddr saddr, t_vm_saddr pos, t_vm_int size)
+{
+   bin_builder_addi_fcall(_builder, getLabel(label), saddr, pos, size);
+}
+
 void BinBuilder::addiFret(const std::string& label)
 {
    bin_builder_addi_fret(_builder, getLabel(label));
@@ -585,6 +591,46 @@ void BinBuilder::addiPutstring(const std::string& label,
                               getLabel(addrLabel), size);
 }
 
+void BinBuilder::addiPutfunction(const std::string& label,
+                                 t_vm_saddr saddr, t_vm_int mode,
+                                 const std::string& addrLabel)
+{
+   bin_builder_addi_putfunction(_builder, getLabel(label),
+                                saddr, mode, getLabel(addrLabel));
+}
+
+void BinBuilder::addiPutsyscall(const std::string& label,
+                                t_vm_saddr saddr, t_vm_int mode,
+                                t_vm_int syscall)
+{
+   bin_builder_addi_putsyscall(_builder, getLabel(label), saddr, mode, syscall);
+}
+
+void BinBuilder::addiPutvar(const std::string& label,
+                            t_vm_saddr saddr, t_vm_int mode,
+                            t_vm_saddr src)
+{
+   bin_builder_addi_putvar(_builder, getLabel(label), saddr, mode, src);
+}
+
+void BinBuilder::addiPutref(const std::string& label,
+                            t_vm_saddr dst, t_vm_saddr src)
+{
+   bin_builder_addi_putref(_builder, getLabel(label), dst, src);
+}
+
+void BinBuilder::addiCopy(const std::string& label,
+                          t_vm_saddr dst, t_vm_saddr src)
+{
+   bin_builder_addi_copy(_builder, getLabel(label), dst, src);
+}
+
+void BinBuilder::addiMove(const std::string& label,
+                          t_vm_saddr dst, t_vm_saddr src)
+{
+   bin_builder_addi_move(_builder, getLabel(label), dst, src);
+}
+
 void BinBuilder::addiSpup(const std::string& label,
                           t_vm_saddr saddr)
 {
@@ -600,6 +646,30 @@ void BinBuilder::addiSyscall(const std::string& label,
                              t_vm_int value)
 {
    bin_builder_addi_syscall(_builder, getLabel(label), value);
+}
+
+void BinBuilder::addiBind(const std::string& label,
+                          t_vm_saddr dst, t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addi_bind(_builder, getLabel(label), dst, it, size);
+}
+
+void BinBuilder::addiLoad(const std::string& label,
+                          t_vm_saddr dst, const std::string& srcLabel)
+{
+   bin_builder_addi_load(_builder, getLabel(label), dst, getLabel(srcLabel));
+}
+
+void BinBuilder::addiStore(const std::string& label,
+                           t_vm_saddr src, const std::string& dstLabel)
+{
+   bin_builder_addi_store(_builder, getLabel(label), src, getLabel(dstLabel));
+}
+
+void BinBuilder::addiInit(const std::string& label,
+                          t_vm_saddr src, const std::string& dstLabel)
+{
+   bin_builder_addi_init(_builder, getLabel(label), src, getLabel(dstLabel));
 }
 
 void BinBuilder::addiPostinc(const std::string& label,
@@ -642,6 +712,12 @@ void BinBuilder::addiLnot(const std::string& label,
                           t_vm_saddr a1, t_vm_saddr a2)
 {
    bin_builder_addi_lnot(_builder, getLabel(label), a1, a2);
+}
+
+void BinBuilder::addiBnot(const std::string& label,
+                          t_vm_saddr a1, t_vm_saddr a2)
+{
+   bin_builder_addi_bnot(_builder, getLabel(label), a1, a2);
 }
 
 void BinBuilder::addiMul(const std::string& label,
@@ -722,6 +798,36 @@ void BinBuilder::addiLor(const std::string& label,
    bin_builder_addi_lor(_builder, getLabel(label), a1, a2, a3);
 }
 
+void BinBuilder::addiLshift(const std::string& label,
+                            t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_lshift(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiRshift(const std::string& label,
+                            t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_rshift(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiBand(const std::string& label,
+                          t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_band(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiBxor(const std::string& label,
+                          t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_bxor(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiBor(const std::string& label,
+                         t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_bor(_builder, getLabel(label), a1, a2, a3);
+}
+
 void BinBuilder::addiAssign(const std::string& label,
                             t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
 {
@@ -756,6 +862,57 @@ void BinBuilder::addiModeq(const std::string& label,
                            t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
 {
    bin_builder_addi_modeq(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiLshifteq(const std::string& label,
+                              t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_lshifteq(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiRshifteq(const std::string& label,
+                              t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_rshiftqeq(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiBandeq(const std::string& label,
+                            t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_bandeq(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiBxoreq(const std::string& label,
+                            t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_bxoreq(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiBoreq(const std::string& label,
+                           t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_boreq(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiSubscript(const std::string& label,
+                               t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3)
+{
+   bin_builder_addi_subscript(_builder, getLabel(label), a1, a2, a3);
+}
+
+void BinBuilder::addiTernary(const std::string& label,
+                             t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3,
+                             t_vm_saddr a4)
+{
+   bin_builder_addi_ternary(_builder, getLabel(label), a1, a2, a3, a4);
+}
+
+void BinBuilder::addiMember(const std::string& label,
+                            t_vm_saddr saddr, const std::string& strLabel,
+                            t_vm_int size, t_vm_saddr res)
+{
+   bin_builder_addi_member(_builder, getLabel(label),
+                           saddr, getLabel(strLabel), size, res);
 }
 
 

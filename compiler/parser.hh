@@ -3,6 +3,7 @@
 
 # include <string>
 # include <vector>
+# include <set>
 # include "token.hh"
 
 class AST;
@@ -25,12 +26,15 @@ class Scanner;
 class Parser
 {
 public:
-   Parser(Scanner* scanner);
+   Parser(const std::string& path);
+   ~Parser();
 
    AST* buildAST();
 
 
 private:
+   std::vector<Scanner*> _pool;
+   std::set<std::string> _files;
    Scanner* _scanner;
 
    AST* expr();
@@ -72,6 +76,7 @@ private:
    void component(std::vector<AST*>& child);
 
    ASTGlobalDef* global_def();
+   void import_def(std::vector<AST*>& child);
 
 
 

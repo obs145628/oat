@@ -125,6 +125,8 @@ public:
                   const std::string& addrLabel);
    void addiFjump(const std::string& label, const std::string& addrLabel,
                   t_vm_saddr saddr);
+   void addiFcall(const std::string& label,
+                  t_vm_saddr saddr, t_vm_saddr pos, t_vm_int size);
    void addiFret(const std::string& label);
    void addiBclear(const std::string& label, t_vm_saddr saddr,
                    t_vm_saddr size);
@@ -137,11 +139,31 @@ public:
                     t_vm_char value);
    void addiPutbool(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
                     t_vm_bool value);
-   void addiPutstring(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
+   void addiPutstring(const std::string& label,
+                      t_vm_saddr saddr, t_vm_int mode,
                       const std::string& addrLabel, t_vm_int size);
+   void addiPutfunction(const std::string& label,
+                        t_vm_saddr saddr, t_vm_int mode,
+                      const std::string& addrLabel);
+   void addiPutsyscall(const std::string& label,
+                       t_vm_saddr saddr, t_vm_int mode,
+                      t_vm_int syscall);
+   void addiPutvar(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr src);
+   void addiPutref(const std::string& label, t_vm_saddr dst, t_vm_saddr src);
+   void addiCopy(const std::string& label, t_vm_saddr dst, t_vm_saddr src);
+   void addiMove(const std::string& label, t_vm_saddr dst, t_vm_saddr src);
    void addiSpup(const std::string& label, t_vm_saddr saddr);
    void addiSpdown(const std::string& label, t_vm_saddr saddr);
    void addiSyscall(const std::string& label, t_vm_int value);
+   void addiBind(const std::string& label,
+                 t_vm_saddr dst, t_vm_saddr it, t_vm_int size);
+   void addiLoad(const std::string& label,
+                 t_vm_saddr dst, const std::string& srcLabel);
+   void addiStore(const std::string& label,
+                  t_vm_saddr src, const std::string& dstLabel);
+   void addiInit(const std::string& label,
+                 t_vm_saddr src, const std::string& dstLabel);
    void addiPostinc(const std::string& label, t_vm_saddr a1, t_vm_saddr a2);
    void addiPostdec(const std::string& label, t_vm_saddr a1, t_vm_saddr a2);
    void addiPreinc(const std::string& label, t_vm_saddr a1, t_vm_saddr a2);
@@ -149,6 +171,7 @@ public:
    void addiUplus(const std::string& label, t_vm_saddr a1, t_vm_saddr a2);
    void addiUminus(const std::string& label, t_vm_saddr a1, t_vm_saddr a2);
    void addiLnot(const std::string& label, t_vm_saddr a1, t_vm_saddr a2);
+   void addiBnot(const std::string& label, t_vm_saddr a1, t_vm_saddr a2);
    void addiMul(const std::string& label, t_vm_saddr a1, t_vm_saddr a2,
                 t_vm_saddr a3);
    void addiDiv(const std::string& label, t_vm_saddr a1, t_vm_saddr a2,
@@ -175,6 +198,16 @@ public:
                  t_vm_saddr a3);
    void addiLor(const std::string& label, t_vm_saddr a1, t_vm_saddr a2,
                 t_vm_saddr a3);
+   void addiLshift(const std::string& label,
+                   t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiRshift(const std::string& label,
+                   t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBand(const std::string& label,
+                 t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBxor(const std::string& label,
+                 t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBor(const std::string& label,
+                t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiAssign(const std::string& label, t_vm_saddr a1, t_vm_saddr a2,
                    t_vm_saddr a3);
    void addiPluseq(const std::string& label, t_vm_saddr a1, t_vm_saddr a2,
@@ -187,6 +220,24 @@ public:
                   t_vm_saddr a3);
    void addiModeq(const std::string& label, t_vm_saddr a1, t_vm_saddr a2,
                   t_vm_saddr a3);
+   void addiLshifteq(const std::string& label,
+                     t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiRshifteq(const std::string& label,
+                     t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBandeq(const std::string& label,
+                   t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBxoreq(const std::string& label,
+                   t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBoreq(const std::string& label,
+                  t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiSubscript(const std::string& label,
+                      t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiTernary(const std::string& label,
+                    t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3,
+                     t_vm_saddr a4);
+   void addiMember(const std::string& label,
+                   t_vm_saddr saddr, const std::string& strLabel,
+                   t_vm_int size, t_vm_saddr res);
 
 
    void addia0(t_vm_ins code);

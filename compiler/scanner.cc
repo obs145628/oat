@@ -4,9 +4,17 @@
 #include <fstream>
 #include <cassert>
 #include "chars.hh"
+#include "str.hh"
 
-Scanner::Scanner(const std::string& label, const std::string& data)
-   : _label(label), _data(data),
+Scanner::Scanner(const std::string& path)
+   : Scanner(str::dirname(path), path, readFile(path))
+{
+
+}
+
+Scanner::Scanner(const std::string& dir, const std::string& label,
+                 const std::string& data)
+   : _dir(dir), _label(label), _data(data),
      _begin(_data.data()), _end(_begin + _data.size()), _it(_begin),
      _pos(0)
 {
@@ -14,19 +22,21 @@ Scanner::Scanner(const std::string& label, const std::string& data)
    assert(_tokens.size() != 0);
 }
 
-Scanner Scanner::fromFile(const std::string& path)
-{
-   std::ifstream fs(path, std::ios::binary);
-   if(!fs.is_open())
-      throw std::runtime_error{"Unable to open file '" + path + "'"};
 
-   return Scanner(path, std::string(
-                     std::istreambuf_iterator<char>(fs),
-                     std::istreambuf_iterator<char>()
-                     ));
+std::string Scanner::getDir() const
+{
+   return _dir;
 }
 
+std::string Scanner::getLabel() const
+{
+   return _label;
+}
 
+std::string Scanner::getData() const
+{
+   return _data;
+}
 
 
 bool Scanner::isEof() const
@@ -449,7 +459,7 @@ bool Scanner::validChar(const std::string& str)
 
 Token Scanner::buildToken(const std::string& token, TokenType type)
 {
-   return Token(token, type,
+   return Token(this, token, type,
                 static_cast<std::size_t>(get_pos()) - token.size());
 }
 
@@ -492,4 +502,22 @@ void Scanner::move_pos(std::ptrdiff_t diff)
    const char* it = _it + diff;
    assert(it >= _begin && it <= _end);
    _it = it;
+}
+
+
+
+
+
+
+
+std::string Scanner::readFile(const std::string& path)
+{
+   std::ifstream fs(path, std::ios::binary);
+   if(!fs.is_open())
+      throw std::runtime_error{"Unable to open file '" + path + "'"};
+
+   return std::string(
+      std::istreambuf_iterator<char>(fs),
+      std::istreambuf_iterator<char>()
+      );
 }

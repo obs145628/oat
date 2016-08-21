@@ -16,8 +16,8 @@ void ASTModule::accept(ASTVisitor& v)
 
 
 ASTComponent::ASTComponent(Token token, const std::vector<AST*>& children,
-                           bool exported, int module)
-   : AST(token, children), _exported(exported), _module(module)
+                           bool exported)
+   : AST(token, children), _exported(exported)
 {
 
 }
@@ -27,15 +27,10 @@ bool ASTComponent::isExported() const
    return _exported;
 }
 
-int ASTComponent::getModule() const
-{
-   return _module;
-}
-
 
 ASTGlobalDef::ASTGlobalDef(Token t, ASTSymbol* symbol, AST* value, bool isConst,
-                           bool exported, int module)
-   : ASTComponent(t, {symbol, value}, exported, module),
+                           bool exported)
+   : ASTComponent(t, {symbol, value}, exported),
      _const(isConst)
 {
    if(_const)
@@ -45,8 +40,8 @@ ASTGlobalDef::ASTGlobalDef(Token t, ASTSymbol* symbol, AST* value, bool isConst,
 }
 
 ASTGlobalDef::ASTGlobalDef(Token t, ASTSymbol* symbol,
-                           bool exported, int module)
-   : ASTComponent(t, {symbol}, exported, module), _const(false)
+                           bool exported)
+   : ASTComponent(t, {symbol}, exported), _const(false)
 {
    assert(t.getType() == TokenType::kw_let);
 }

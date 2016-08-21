@@ -19,14 +19,12 @@ class ASTComponent : public AST
 
 public:
    ASTComponent(Token token, const std::vector<AST*>& children,
-                bool exported, int module);
+                bool exported);
 
    bool isExported() const;
-   int getModule() const;
 
 private:
    bool _exported;
-   int _module;
 };
 
 
@@ -34,9 +32,9 @@ class ASTGlobalDef : public ASTComponent
 {
 public:
    ASTGlobalDef(Token t, ASTSymbol* symbol, AST* value, bool isConst,
-                bool exported, int module);
+                bool exported);
    ASTGlobalDef(Token t, ASTSymbol* symbol,
-                bool exported, int module);
+                bool exported);
 
    virtual void accept(ASTVisitor& v) override;
 

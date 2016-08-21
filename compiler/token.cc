@@ -2,18 +2,18 @@
 #include <cassert>
 #include <sstream>
 #include "str.hh"
+#include "scanner.hh"
 
-
-Token::Token()
-   : Token("", TokenType::eof, 0)
+Token::Token(Scanner* scanner, const std::string& token,
+             TokenType type, std::size_t pos)
+   : _scanner(scanner), _representation(token), _type(type), _pos(pos)
 {
 
 }
 
-Token::Token(const std::string& token, TokenType type, std::size_t pos)
-   : _representation(token), _type(type), _pos(pos)
+Scanner* Token::getScanner() const
 {
-
+   return _scanner;
 }
 
 std::string Token::getRepresentation() const
@@ -47,6 +47,11 @@ bool Token::isOfType(const std::vector<TokenType>& types) const
       if(_type == t)
          return true;
    return false;
+}
+
+void Token::err(const std::string& message)
+{
+   _scanner->tokenError(*this, message);
 }
 
 unsigned long Token::getInt() const
@@ -203,7 +208,9 @@ const std::map<TokenType, std::string> Token::TYPES_NAMES = {
    {TokenType::kw_true, "kw_true"},
    {TokenType::kw_false, "kw_false"},
    {TokenType::kw_const, "kw_const"},
-   {TokenType::kw_let, "kw_let"}
+   {TokenType::kw_let, "kw_let"},
+   {TokenType::kw_export, "kw_export"},
+   {TokenType::kw_import, "kw_import"}
 };
 
 const std::map<std::string, TokenType> Token::TYPES_LOOKUP = {
@@ -266,6 +273,8 @@ const std::map<std::string, TokenType> Token::TYPES_LOOKUP = {
    {"false", TokenType::kw_false},
    {"const", TokenType::kw_const},
    {"let", TokenType::kw_let},
+   {"export", TokenType::kw_export},
+   {"import", TokenType::kw_import},
 
 
    {"int", TokenType::reserved},
@@ -282,10 +291,10 @@ const std::map<std::string, TokenType> Token::TYPES_LOOKUP = {
    {"public", TokenType::reserved},
    {"private", TokenType::reserved},
    {"protected", TokenType::reserved},
+   {"this", TokenType::reserved},
    {"friend", TokenType::reserved},
    {"override", TokenType::reserved},
    {"import", TokenType::reserved},
-   {"export", TokenType::reserved},
    {"as", TokenType::reserved},
    {"in", TokenType::reserved},
    {"try", TokenType::reserved},

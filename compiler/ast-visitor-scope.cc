@@ -13,28 +13,32 @@ RuntimeScope* ASTVisitorScope::getScope(AST* ast, RuntimeScope* parent)
    return ASTVisitorScope(ast, parent)._scope;
 }
 
-void ASTVisitorScope::visit(ASTStatementsBlock*)
+void ASTVisitorScope::visit(ASTStatementsBlock* e)
 {
    assert(_parent);
-   _scope = new RuntimeScope(_parent->getFrame(), _parent);
+   _scope = new RuntimeScope(e->getToken().getScanner(),
+                             _parent->getFrame(), _parent);
 }
 
-void ASTVisitorScope::visit(ASTStatementFor*)
+void ASTVisitorScope::visit(ASTStatementFor* e)
 {
    assert(_parent);
-   _scope = new RuntimeScope(_parent->getFrame(), _parent);
+   _scope = new RuntimeScope(e->getToken().getScanner(),
+                             _parent->getFrame(), _parent);
 }
 
-void ASTVisitorScope::visit(ASTModule*)
+void ASTVisitorScope::visit(ASTModule* e)
 {
    assert(!_parent);
-   _scope = new RuntimeScope(new StackFrame, nullptr);
+   _scope = new RuntimeScope(e->getToken().getScanner(),
+                             new StackFrame, nullptr);
 }
 
-void ASTVisitorScope::visit(ASTFunctionDef*)
+void ASTVisitorScope::visit(ASTFunctionDef* e)
 {
    assert(_parent);
-   _scope = new RuntimeScope(new StackFrame, _parent);
+   _scope = new RuntimeScope(e->getToken().getScanner(),
+                             new StackFrame, _parent);
 }
 
 void ASTVisitorScope::visitDefault(AST*)

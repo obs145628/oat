@@ -16,6 +16,10 @@ namespace str
 
    std::string litteralToStr(const std::string& str);
 
+   std::string dirname(const std::string& str);
+
+   std::string pathJoin(const std::string& a, const std::string& b);
+
 }
 
 #endif //!STR_HH_

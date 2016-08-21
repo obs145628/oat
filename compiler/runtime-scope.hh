@@ -3,9 +3,12 @@
 
 # include <map>
 # include <string>
+# include <vector>
 # include "stack-frame.hh"
 
 class ASTFunctionDef;
+class ASTGlobalDef;
+class Scanner;
 
 struct RuntimeVar
 {
@@ -20,13 +23,15 @@ struct GlobalVar
    t_vm_mode mode;
    bool initialized;
    std::string label;
+   ASTGlobalDef* ast;
 };
 
 class RuntimeScope
 {
 
 public:
-   RuntimeScope(StackFrame* frame, RuntimeScope* parent = nullptr);
+   RuntimeScope(Scanner* scanner,
+                StackFrame* frame, RuntimeScope* parent = nullptr);
 
    RuntimeScope* getRoot();
 
@@ -47,10 +52,8 @@ public:
 
    bool hasGlobal(const std::string& name);
    GlobalVar getGlobal(const std::string& name);
-   void defineGlobal(const std::string& name, const std::string& label,
-                     t_vm_type type, t_vm_mode mode);
-   void setGlobal(const std::string& name, t_vm_type type);
-   void initGlobal(const std::string& name);
+   void defineGlobal(ASTGlobalDef* g, const std::string& label,
+                     t_vm_type type);
 
    bool hasGlobalSymbol(const std::string& name);
 
@@ -58,8 +61,9 @@ public:
 
 private:
    std::map<std::string, RuntimeVar> _vars;
-   std::map<std::string, ASTFunctionDef*> _fns;
-   std::map<std::string, GlobalVar> _globals;
+   std::map<std::string, std::vector<ASTFunctionDef*>> _fns;
+   std::map<std::string, std::vector<GlobalVar>> _globals;
+   Scanner* _scanner;
    StackFrame* _frame;
    RuntimeScope* _parent;
 

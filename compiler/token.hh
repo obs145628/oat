@@ -6,6 +6,8 @@
 # include <vector>
 # include <map>
 
+class Scanner;
+
 enum class TokenType
 {
    eof,
@@ -77,22 +79,27 @@ enum class TokenType
       kw_true,
       kw_false,
       kw_const,
-      kw_let
+      kw_let,
+      kw_export,
+      kw_import
 };
 
 class Token
 {
 
 public:
-   Token();
-   Token(const std::string& token, TokenType type, std::size_t pos);
+   Token(Scanner* scanner, const std::string& token,
+         TokenType type, std::size_t pos);
 
+   Scanner* getScanner() const;
    std::string getRepresentation() const;
    std::size_t getPosition() const;
    TokenType getType() const;
    std::string getTypeString() const;
    bool isOfType(TokenType type) const;
    bool isOfType(const std::vector<TokenType>& types) const;
+
+   void err(const std::string& message);
 
    unsigned long getInt() const;
    double getReal() const;
@@ -107,6 +114,7 @@ public:
    static std::vector<TokenType> lookupTypes(const std::string& token);
 
 private:
+   Scanner* _scanner;
    std::string _representation;
    TokenType _type;
    std::size_t _pos;

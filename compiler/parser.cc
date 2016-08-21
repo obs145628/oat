@@ -5,10 +5,17 @@
 #include "ast-modules.hh"
 
 
-Parser::Parser(Scanner* scanner)
-   : _scanner(scanner)
+Parser::Parser(const std::string& path)
+   : _scanner(new Scanner(path))
 {
+   _pool.push_back(_scanner);
+   _files.insert(path);
+}
 
+Parser::~Parser()
+{
+   for(Scanner* scanner: _pool)
+      delete scanner;
 }
 
 AST* Parser::buildAST()

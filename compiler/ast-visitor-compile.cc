@@ -280,12 +280,53 @@ void ASTVisitorCompile::visit(ASTOpLeq*)
 
 void ASTVisitorCompile::visit(ASTOpLand*)
 {
-   compileOpb(VM_INS_LAND);
+   ASTState* left = _state->child(0);
+   ASTState* right = _state->child(1);
+
+   std::string trueLabel = _builder->getUniqueLabel("land_true_");
+   std::string falseLabel = _builder->getUniqueLabel("land_false_");
+   std::string endLabel = _builder->getUniqueLabel("land_end_");
+
+   t_vm_saddr dst = _state->getVar(0);
+   t_vm_saddr op1 = _state->getVar(1);
+   t_vm_saddr op2 = _state->getVar(2);
+
+   ASTVisitorCompile {left, _builder};
+   _builder->addiLnot(op1, dst);
+   _builder->addiCjump(dst, falseLabel);
+
+   ASTVisitorCompile {right, _builder};
+   _builder->addiCjump(op2, trueLabel);
+
+   _builder->addiPutbool(falseLabel, dst, DVAR_MVAR, FALSE);
+   _builder->addiJump(endLabel);
+   _builder->addiPutbool(trueLabel, dst, DVAR_MVAR, TRUE);
+   _builder->addiNop(endLabel);
 }
 
 void ASTVisitorCompile::visit(ASTOpLor*)
 {
-   compileOpb(VM_INS_LOR);
+   ASTState* left = _state->child(0);
+   ASTState* right = _state->child(1);
+
+   std::string trueLabel = _builder->getUniqueLabel("lor_true_");
+   std::string falseLabel = _builder->getUniqueLabel("lor_false_");
+   std::string endLabel = _builder->getUniqueLabel("lor_end_");
+
+   t_vm_saddr dst = _state->getVar(0);
+   t_vm_saddr op1 = _state->getVar(1);
+   t_vm_saddr op2 = _state->getVar(2);
+
+   ASTVisitorCompile {left, _builder};
+   _builder->addiCjump(op1, trueLabel);
+
+   ASTVisitorCompile {right, _builder};
+   _builder->addiCjump(op2, trueLabel);
+
+   _builder->addiPutbool(falseLabel, dst, DVAR_MVAR, FALSE);
+   _builder->addiJump(endLabel);
+   _builder->addiPutbool(trueLabel, dst, DVAR_MVAR, TRUE);
+   _builder->addiNop(endLabel);
 }
 
 void ASTVisitorCompile::visit(ASTOpLnot*)
@@ -380,15 +421,31 @@ void ASTVisitorCompile::visit(ASTOpBoreq*)
 
 void ASTVisitorCompile::visit(ASTOpTernary*)
 {
-   visitChildren();
+   ASTState* condition = _state->child(0);
+   ASTState* t = _state->child(1);
+   ASTState* f = _state->child(2);
+
+   std::string trueLabel = _builder->getUniqueLabel("ternary_true_");
+   std::string falseLabel = _builder->getUniqueLabel("ternary_false_");
+   std::string endLabel = _builder->getUniqueLabel("ternary_end_");
 
    t_vm_saddr dst = _state->getVar(0);
-   t_vm_saddr a1 = _state->getVar(1);
-   t_vm_saddr a2 = _state->getVar(2);
-   t_vm_saddr a3 = _state->getVar(3);
+   t_vm_saddr op1 = _state->getVar(1);
+   t_vm_saddr op2 = _state->getVar(2);
+   t_vm_saddr op3 = _state->getVar(3);
 
-   _builder->addia4(VM_INS_TERNARY, _builder->aSadddr(a1),_builder->aSadddr(a2),
-                    _builder->aSadddr(a3), _builder->aSadddr(dst));
+   ASTVisitorCompile {condition, _builder};
+   _builder->addiCjump(op1, trueLabel);
+
+   _builder->addiNop(falseLabel);
+   ASTVisitorCompile{f, _builder};
+   _builder->addiMove(dst, op3);
+   _builder->addiJump(endLabel);
+
+   _builder->addiNop(trueLabel);
+   ASTVisitorCompile{t, _builder};
+   _builder->addiMove(dst, op2);
+   _builder->addiNop(endLabel);
 }
 
 void ASTVisitorCompile::visit(ASTOpSubscript*)

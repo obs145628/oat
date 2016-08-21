@@ -1,9 +1,14 @@
 #include "runtime-scope.hh"
 #include <cassert>
 #include "slib.hh"
+#include "ast-functions.hh"
+#include "ast-modules.hh"
+#include "ast-values.hh"
+#include "../vm/dvar.h"
 
-RuntimeScope::RuntimeScope(StackFrame* frame, RuntimeScope* parent)
-   : _frame(frame), _parent(parent)
+RuntimeScope::RuntimeScope(Scanner* scanner, StackFrame* frame,
+                           RuntimeScope* parent)
+   : _scanner(scanner), _frame(frame), _parent(parent)
 {
 
 }
@@ -71,63 +76,104 @@ void RuntimeScope::setVar(const std::string& name, t_vm_type type)
 bool RuntimeScope::hasFunction(const std::string& name)
 {
    RuntimeScope* root = getRoot();
-   return root->_fns.find(name) != root->_fns.end();
+   auto it = root->_fns.find(name);
+   if(it == root->_fns.end())
+      return false;
+
+   std::vector<ASTFunctionDef*>& fns = it->second;
+   for(ASTFunctionDef* f: fns)
+      if(f->isExported() || f->getToken().getScanner() == _scanner)
+         return true;
+
+   return false;
 }
 
 ASTFunctionDef* RuntimeScope::getFunction(const std::string& name)
 {
    assert(hasFunction(name));
-   return getRoot()->_fns[name];
+   RuntimeScope* root = getRoot();
+   auto it = root->_fns.find(name);
+
+   std::vector<ASTFunctionDef*>& fns = it->second;
+   for(ASTFunctionDef* f: fns)
+      if(f->isExported() || f->getToken().getScanner() == _scanner)
+         return f;
+
+   return nullptr;
 }
 
 void RuntimeScope::defineFunction(const std::string& name,
                                   ASTFunctionDef* function)
 {
    assert(!hasGlobalSymbol(name));
-   getRoot()->_fns[name] = function;
+   RuntimeScope* root = getRoot();
+   auto it = root->_fns.find(name);
+
+   if(it == root->_fns.end())
+   {
+      root->_fns[name] = {function};
+   }
+
+   else
+   {
+      it->second.push_back(function);
+   }
 }
 
 
 bool RuntimeScope::hasGlobal(const std::string& name)
 {
    RuntimeScope* root = getRoot();
-   return root->_globals.find(name) != root->_globals.end();
+   auto it = root->_globals.find(name);
+   if(it == root->_globals.end())
+      return false;
+
+   std::vector<GlobalVar>& globals = it->second;
+   for(const GlobalVar&  g: globals)
+      if(g.ast->isExported() || g.ast->getToken().getScanner() == _scanner)
+         return true;
+
+   return false;
 }
 
 GlobalVar RuntimeScope::getGlobal(const std::string& name)
 {
    assert(hasGlobal(name));
-   return getRoot()->_globals[name];
+   RuntimeScope* root = getRoot();
+   auto it = root->_globals.find(name);
+
+   std::vector<GlobalVar>& globals = it->second;
+   for(const GlobalVar&  g: globals)
+      if(g.ast->isExported() || g.ast->getToken().getScanner() == _scanner)
+         return g;
+
+   return globals[0];
 }
 
-void RuntimeScope::defineGlobal(const std::string& name,
-                                const std::string& label,
-                                t_vm_type type, t_vm_mode mode)
+void RuntimeScope::defineGlobal(ASTGlobalDef* g,
+                                const std::string& label, t_vm_type type)
 {
+   std::string name = g->getSymbol()->getName();
    assert(!hasGlobalSymbol(name));
    GlobalVar global;
    global.type = type;
-   global.mode = mode;
+   global.mode = g->isConst() ? DVAR_MCONST : DVAR_MVAR;
    global.initialized = false;
    global.label = label;
+   global.ast = g;
 
+   RuntimeScope* root = getRoot();
+   auto it = root->_globals.find(name);
 
-   getRoot()->_globals[name] = global;
-}
+   if(it == root->_globals.end())
+   {
+      root->_globals[name] = {global};
+   }
 
-void RuntimeScope::setGlobal(const std::string& name, t_vm_type type)
-{
-   assert(hasGlobal(name));
-   auto it = getRoot()->_globals.find(name);
-   it->second.type = type;
-}
-
-void RuntimeScope::initGlobal(const std::string& name)
-{
-   assert(hasGlobal(name));
-   assert(!(getGlobal(name).initialized));
-   auto it = getRoot()->_globals.find(name);
-   it->second.initialized = true;
+   else
+   {
+      it->second.push_back(global);
+   }
 }
 
 bool RuntimeScope::hasGlobalSymbol(const std::string& name)

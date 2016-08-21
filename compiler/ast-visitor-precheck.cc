@@ -48,7 +48,6 @@ void ASTVisitorPrecheck::visit(ASTGlobalDef* e)
 {
    std::string name = e->getSymbol()->getName();
    RuntimeScope* scope = _state->scope();
-   t_vm_mode mode = e->isConst() ? DVAR_MCONST : DVAR_MVAR;
    std::string label = _builder->getUniqueLabel(name + "_global_");
 
    if(LOG_PRECHECK)
@@ -56,7 +55,7 @@ void ASTVisitorPrecheck::visit(ASTGlobalDef* e)
 
    if(scope->hasGlobalSymbol(name))
       _state->tokenError("Global symbol already defined");
-   scope->defineGlobal(name, label, DVAR_TNOT, mode);
+   scope->defineGlobal(e, label, DVAR_TNOT);
 }
 
 void ASTVisitorPrecheck::visitDefault(AST*)

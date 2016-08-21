@@ -5,8 +5,8 @@
 #include "scanner.hh"
 #include <cassert>
 
-ASTState::ASTState(AST* ast, Scanner* scanner)
-   : ASTState(ast, scanner, nullptr)
+ASTState::ASTState(AST* ast)
+   : ASTState(ast, nullptr)
 {
 
 }
@@ -27,8 +27,8 @@ ASTState::~ASTState()
       delete _scope;
 }
 
-ASTState::ASTState(AST* ast, Scanner* scanner, RuntimeScope* parentScope)
-   : _ast(ast), _scanner(scanner), _parent(nullptr)
+ASTState::ASTState(AST* ast, RuntimeScope* parentScope)
+   : _ast(ast), _parent(nullptr)
 {
    _scope = ASTVisitorScope::getScope(_ast, parentScope);
    _infos = ASTInfos::getInfos(_ast);
@@ -37,7 +37,7 @@ ASTState::ASTState(AST* ast, Scanner* scanner, RuntimeScope* parentScope)
 
    for(AST* astChild: _ast->getChildren())
    {
-      ASTState* stateChild = new ASTState(astChild, _scanner, _scope);
+      ASTState* stateChild = new ASTState(astChild,  _scope);
       _children.push_back(stateChild);
       stateChild->_parent = this;
    }
@@ -50,7 +50,7 @@ AST* ASTState::ast() const
 
 Scanner* ASTState::scanner() const
 {
-   return _scanner;
+   return _ast->getToken().getScanner();
 }
 
 RuntimeScope* ASTState::scope() const
@@ -143,5 +143,5 @@ void ASTState::addLabel(const std::string& label)
 
 void ASTState::tokenError(const std::string& message)
 {
-   _scanner->tokenError(_ast->getToken(), message);
+   scanner()->tokenError(_ast->getToken(), message);
 }

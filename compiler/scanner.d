@@ -1,1 +1,1 @@
-scanner.o: scanner.cc scanner.hh token.hh chars.hh
+scanner.o: scanner.cc scanner.hh token.hh chars.hh str.hh

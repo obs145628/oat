@@ -14,13 +14,13 @@ class StackFrame;
 class ASTState
 {
 public:
-   ASTState(AST* ast, Scanner* scanner);
+   ASTState(AST* ast);
    ~ASTState();
 
    ASTState(const ASTState&) = delete;
 
 private:
-   ASTState(AST* ast, Scanner* scanner, RuntimeScope* parentScope);
+   ASTState(AST* ast, RuntimeScope* parentScope);
 
 public:
 
@@ -47,7 +47,6 @@ public:
 
 private:
    AST* _ast;
-   Scanner* _scanner;
    RuntimeScope* _scope;
    ASTState* _parent;
    ASTInfos _infos;

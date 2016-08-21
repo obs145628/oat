@@ -12,7 +12,7 @@ public:
    ASTFunctionDef(Token token, ASTSymbol* name,
                   const std::vector<ASTSymbol*>& args,
                   ASTStatementsBlock* statement,
-                  bool exported, int module);
+                  bool exported);
 
    virtual void accept(ASTVisitor& v) override;
 

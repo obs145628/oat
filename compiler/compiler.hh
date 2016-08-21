@@ -2,8 +2,9 @@
 # define COMPILER_HH_
 
 # include <string>
-# include "scanner.hh"
+# include <vector>
 # include "bin-builder.hh"
+# include "parser.hh"
 
 class AST;
 class ASTState;
@@ -14,13 +15,12 @@ class Compiler
 
 public:
    Compiler(const std::string& path);
-   ~Compiler();
 
    DotTree* buildDotTree() const;
    void compileToPath(const std::string& path);
 
 private:
-   Scanner _scanner;
+   Parser _parser;
    BinBuilder _builder;
    AST* _ast;
    ASTState* _state;
