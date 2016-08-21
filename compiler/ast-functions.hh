@@ -1,17 +1,18 @@
 #ifndef AST_FUNCTIONS_HH_
 # define AST_FUNCTIONS_HH_
 
-# include "ast.hh"
+# include "ast-modules.hh"
 
 class ASTSymbol;
 class ASTStatementsBlock;
 
-class ASTFunctionDef : public AST
+class ASTFunctionDef : public ASTComponent
 {
 public:
    ASTFunctionDef(Token token, ASTSymbol* name,
                   const std::vector<ASTSymbol*>& args,
-                  ASTStatementsBlock* statement);
+                  ASTStatementsBlock* statement,
+                  bool exported, int module);
 
    virtual void accept(ASTVisitor& v) override;
 

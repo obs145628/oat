@@ -8,12 +8,12 @@
 #include "dvar.h"
 #include "date.h"
 
-typedef void (*f_syscall_)();
+typedef dvar* (*f_syscall_)(dvar* argv, t_vm_int argc);
 
-static void syscall_exit_()
+static dvar* syscall_exit_(dvar* v, t_vm_int argc)
 {
+   (void) argc;
    int code;
-   dvar* v = vm_stack_sp();
    long time = dateNow() - vm_exec_get_start_time();
 
    if(v->type == DVAR_TINT)
@@ -24,31 +24,46 @@ static void syscall_exit_()
    printf("Program execution finished with code %d\n", code);
    printf("Duration: %ldms\n", time);
    exit(code);
+   return NULL;;
 }
 
-static void syscall_kprint_()
+static dvar* syscall_kprint_(dvar* v, t_vm_int argc)
 {
-   dvar* v = vm_stack_sp();
+   (void) argc;
    dvar_print(v);
+   return v;
 }
 
-static void syscall_print_()
+static dvar* syscall_print_(dvar* argv, t_vm_int argc)
 {
-   char* str = dvar_to_string(vm_stack_sp());
-   fwrite(str, 1, strlen(str), stdout);
-   free(str);
+   for(t_vm_int i = 0; i < argc; ++i)
+   {
+      char* str = dvar_to_str(argv + i);
+      fwrite(str, 1, strlen(str), stdout);
+      free(str);
+   }
+   return argv;
+}
+
+static dvar* syscall_to_string_(dvar* v, t_vm_int argc)
+{
+   (void) argc;
+   char* str = dvar_to_str(v);
+   dvar_putstring(v, 1, str, strlen(str));
+   return v;
 }
 
 
-void vm_syscall_exec(t_vm_int syscall)
+dvar* vm_syscall_exec(t_vm_int syscall, dvar* argv, t_vm_int argc)
 {
    static const f_syscall_ FNS[] = {
       syscall_exit_,
       syscall_kprint_,
-      syscall_print_
+      syscall_print_,
+      syscall_to_string_
    };
 
    assert(syscall >= 0 && syscall < VM_NB_SYSCALL);
 
-   FNS[syscall]();
+   return FNS[syscall](argv, argc);
 }

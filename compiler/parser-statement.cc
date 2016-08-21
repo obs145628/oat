@@ -2,7 +2,6 @@
 #include "ast-statements.hh"
 #include "ast-values.hh"
 
-
 ASTStatementsBlock* Parser::statement()
 {
    if(isTokenOfType(TokenType::lcurlybracket))
@@ -57,7 +56,7 @@ AST* Parser::statement_body()
       return statement_empty();
    }
 
-   else if(peekToken().isOfType(TokenType::si_define))
+   else if(t.isOfType({TokenType::kw_let, TokenType::kw_const}))
    {
       return statement_define();
    }
@@ -75,6 +74,26 @@ AST* Parser::statement_body()
    else if(t.isOfType(TokenType::kw_while))
    {
       return statement_while();
+   }
+
+   else if(t.isOfType(TokenType::kw_do))
+   {
+      return statement_do();
+   }
+
+   else if(t.isOfType(TokenType::kw_for))
+   {
+      return statement_for();
+   }
+
+   else if(t.isOfType(TokenType::kw_break))
+   {
+      return statement_break();
+   }
+
+   else if(t.isOfType(TokenType::kw_continue))
+   {
+      return statement_continue();
    }
 
    else
@@ -96,19 +115,32 @@ ASTStatementEmpty* Parser::statement_empty()
 
 ASTStatementDefine* Parser::statement_define()
 {
-   //symbol ":=" expr ";"
+   //("let" | "const") symbol ("=" expr)? ";"
+
+   Token t = getToken();
+   if(!t.isOfType({TokenType::kw_let, TokenType::kw_const}))
+      tokenError(t, "let / const expected");
+   next();
+
+   bool isConst = t.isOfType(TokenType::kw_const);
 
    Token symbol = getToken();
    if(!symbol.isOfType(TokenType::symbol))
       tokenError(symbol, "Symbol expected");
    next();
 
-   Token si = getToken();
-   if(!si.isOfType(TokenType::si_define))
-      tokenError(si, ":= expected");
-   next();
+   ASTStatementDefine* res;
+   if(!isConst && isTokenOfType(TokenType::semicollon))
+      res = new ASTStatementDefine(t, new ASTSymbol(symbol));
 
-   auto res = new ASTStatementDefine(si, new ASTSymbol(symbol), expr());
+   else
+   {
+      Token op = getToken();
+      if(!op.isOfType(TokenType::op_assign))
+         tokenError(op, "= expected");
+      next();
+      res = new ASTStatementDefine(t, new ASTSymbol(symbol), expr(), isConst);
+   }
 
    if(!isTokenOfType(TokenType::semicollon))
       tokenError(getToken(), "; expected");
@@ -180,6 +212,113 @@ ASTStatementWhile* Parser::statement_while()
 
    ASTStatementsBlock* whileStatement = statement();
    return new ASTStatementWhile(t, condition, whileStatement);
+}
+
+ASTStatementDo* Parser::statement_do()
+{
+   // "do" statement  "while" "(" exp ")" ";"
+
+   Token doToken = getToken();
+   if(!doToken.isOfType(TokenType::kw_do))
+      tokenError(doToken, "do expected");
+   next();
+
+   ASTStatementsBlock* doStatement = statement();
+
+   if(!isTokenOfType(TokenType::kw_while))
+      tokenError(getToken(), "while expected");
+   next();
+
+   if(!isTokenOfType(TokenType::lparenthesis))
+      tokenError(getToken(), "'(' expected");
+   next();
+
+   AST* condition = expr();
+   if(!isTokenOfType(TokenType::rparenthesis))
+      tokenError(getToken(), "')' expected");
+   next();
+
+   if(!isTokenOfType(TokenType::semicollon))
+      tokenError(getToken(), "';' expected");
+   next();
+
+   return new ASTStatementDo(doToken, condition, doStatement);
+}
+
+ASTStatementFor* Parser::statement_for()
+{
+   //"for "(" statement_body expr? ";" expr? ")" statement
+   AST* init;
+   AST* condition;
+   AST* inc;
+   ASTStatementsBlock* forStatement;
+
+   Token forToken = getToken();
+   if(!forToken.isOfType(TokenType::kw_for))
+      tokenError(forToken, "for expected");
+   next();
+
+   if(!isTokenOfType(TokenType::lparenthesis))
+      tokenError(getToken(), "( expected");
+   next();
+
+   init = statement_body();
+
+   if(isTokenOfType(TokenType::semicollon))
+      condition = new ASTTrue(Token("true", TokenType::kw_true,
+                                    getToken().getPosition()));
+   else
+      condition = expr();
+
+   if(!isTokenOfType(TokenType::semicollon))
+      tokenError(getToken(), "; expected");
+   next();
+
+   if(isTokenOfType(TokenType::rparenthesis))
+      inc = new ASTNull(Token("null", TokenType::kw_null,
+                              getToken().getPosition()));
+   else
+      inc = expr();
+
+   if(!isTokenOfType(TokenType::rparenthesis))
+      tokenError(getToken(), ") expected");
+   next();
+
+   forStatement = statement();
+
+   return new ASTStatementFor(forToken, init, condition, inc, forStatement);
+}
+
+ASTStatementBreak* Parser::statement_break()
+{
+   // "break" ";"
+
+   Token t = getToken();
+   if(!t.isOfType(TokenType::kw_break))
+      tokenError(t, "break keyword expected");
+   next();
+
+   if(!getToken().isOfType(TokenType::semicollon))
+      tokenError(t, "; expected");
+   next();
+
+   return new ASTStatementBreak(t);
+}
+
+ASTStatementContinue* Parser::statement_continue()
+{
+   //  "continue" ";"
+
+   Token t = getToken();
+   if(!t.isOfType(TokenType::kw_continue))
+      tokenError(t, "continue keyword expected");
+   next();
+
+   if(!getToken().isOfType(TokenType::semicollon))
+      tokenError(t, "; expected");
+   next();
+
+   return new ASTStatementContinue(t);
 }
 
 AST* Parser::statement_expr()

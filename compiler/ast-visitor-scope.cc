@@ -19,16 +19,22 @@ void ASTVisitorScope::visit(ASTStatementsBlock*)
    _scope = new RuntimeScope(_parent->getFrame(), _parent);
 }
 
-void ASTVisitorScope::visit(ASTFunctionDef*)
+void ASTVisitorScope::visit(ASTStatementFor*)
 {
    assert(_parent);
-   _scope = new RuntimeScope(new StackFrame, _parent);
+   _scope = new RuntimeScope(_parent->getFrame(), _parent);
 }
 
 void ASTVisitorScope::visit(ASTModule*)
 {
    assert(!_parent);
-   _scope = new RuntimeScope(nullptr, nullptr);
+   _scope = new RuntimeScope(new StackFrame, nullptr);
+}
+
+void ASTVisitorScope::visit(ASTFunctionDef*)
+{
+   assert(_parent);
+   _scope = new RuntimeScope(new StackFrame, _parent);
 }
 
 void ASTVisitorScope::visitDefault(AST*)

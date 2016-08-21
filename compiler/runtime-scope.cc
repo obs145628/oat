@@ -1,5 +1,6 @@
 #include "runtime-scope.hh"
 #include <cassert>
+#include "slib.hh"
 
 RuntimeScope::RuntimeScope(StackFrame* frame, RuntimeScope* parent)
    : _frame(frame), _parent(parent)
@@ -46,16 +47,18 @@ RuntimeVar RuntimeScope::getVar(const std::string& name) const
    return it == _vars.end() ? _parent->getVar(name) : it->second;
 }
 
-void RuntimeScope::defineVar(const std::string& name, char type)
+void RuntimeScope::defineVar(const std::string& name,
+                             t_vm_type type, t_vm_mode mode)
 {
    assert(!ownVar(name));
    RuntimeVar rvar;
    rvar.type = type;
+   rvar.mode = mode;
    rvar.pos = getFrame()->addVar();
    _vars[name] = rvar;
 }
 
-void RuntimeScope::setVar(const std::string& name, char type)
+void RuntimeScope::setVar(const std::string& name, t_vm_type type)
 {
    assert(hasVar(name));
    auto it = _vars.find(name);
@@ -80,6 +83,54 @@ ASTFunctionDef* RuntimeScope::getFunction(const std::string& name)
 void RuntimeScope::defineFunction(const std::string& name,
                                   ASTFunctionDef* function)
 {
-   assert(!hasFunction(name));
+   assert(!hasGlobalSymbol(name));
    getRoot()->_fns[name] = function;
+}
+
+
+bool RuntimeScope::hasGlobal(const std::string& name)
+{
+   RuntimeScope* root = getRoot();
+   return root->_globals.find(name) != root->_globals.end();
+}
+
+GlobalVar RuntimeScope::getGlobal(const std::string& name)
+{
+   assert(hasGlobal(name));
+   return getRoot()->_globals[name];
+}
+
+void RuntimeScope::defineGlobal(const std::string& name,
+                                const std::string& label,
+                                t_vm_type type, t_vm_mode mode)
+{
+   assert(!hasGlobalSymbol(name));
+   GlobalVar global;
+   global.type = type;
+   global.mode = mode;
+   global.initialized = false;
+   global.label = label;
+
+
+   getRoot()->_globals[name] = global;
+}
+
+void RuntimeScope::setGlobal(const std::string& name, t_vm_type type)
+{
+   assert(hasGlobal(name));
+   auto it = getRoot()->_globals.find(name);
+   it->second.type = type;
+}
+
+void RuntimeScope::initGlobal(const std::string& name)
+{
+   assert(hasGlobal(name));
+   assert(!(getGlobal(name).initialized));
+   auto it = getRoot()->_globals.find(name);
+   it->second.initialized = true;
+}
+
+bool RuntimeScope::hasGlobalSymbol(const std::string& name)
+{
+   return hasFunction(name) || hasGlobal(name) || SLib::hasFunction(name);
 }

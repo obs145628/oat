@@ -1,29 +1,32 @@
 #include "vm-exec.h"
 #include <string.h>
+#include <stdio.h>
 #include <assert.h>
 #include "vm-stack.h"
 #include "vm-bin.h"
 #include "vm-syscall.h"
 #include "const.h"
 #include "dvar.h"
+#include "dvar-fun.h"
 #include "date.h"
+#include "err.h"
 
 # define PCF_SIZE (10 * 1024)
-static const char* pcf_frames_[PCF_SIZE];
-static const char** pcf_ = NULL;
+static char* pcf_frames_[PCF_SIZE];
+static char** pcf_ = NULL;
 
 static t_vm_ins ins_code_;
 
 static long time_start_;
 
-static void pcf_push_(const char* addr)
+static void pcf_push_(char* addr)
 {
    assert(pcf_);
    assert(pcf_ < pcf_frames_ + PCF_SIZE);
    *(pcf_++) = addr;
 }
 
-static const char* pcf_pop_()
+static char* pcf_pop_()
 {
    assert(pcf_);
    assert(pcf_ > pcf_frames_);
@@ -62,7 +65,7 @@ static void exec_ins_cjump_()
    buffer += sizeof(t_vm_saddr);
    memcpy(&p2, buffer, sizeof(t_vm_addr));
 
-   oat_bool b = dvar_to_bool(vm_stack_at(p1));
+   t_vm_bool b = dvar_to_bool(vm_stack_at(p1));
    if(b)
       vm_bin_buffer_set_pc(vm_bin_buffer_begin() + p2);
    else
@@ -80,11 +83,64 @@ static void exec_ins_fjump_()
    memcpy(&p2, buffer, sizeof(t_vm_saddr));
 
    vm_stack_fup(p2);
-   const char* next = vm_bin_buffer_pc()
+   char* next = vm_bin_buffer_pc()
     + VM_INS_INFOS[VM_INS_FJUMP].size;
    pcf_push_(next);
 
    vm_bin_buffer_set_pc(vm_bin_buffer_begin() + p1);
+}
+
+static void exec_ins_fcall_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+   t_vm_int p3;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p3, buffer, sizeof(t_vm_int));
+
+   dvar* v = vm_stack_at(p1);
+   dvar* args = vm_stack_at(p2);
+
+   assert(p3 >= 0);
+
+   if(v->type == DVAR_TREF)
+      v = v->v_ref;
+
+   if(v->type != DVAR_TFUN)
+      err("Operator() can only be applied to functions");
+
+   dvar_fun* fn = v->v_fun;
+   dvar* args_end = vm_stack_at(p2 + p3 + fn->size);
+
+   if(fn->size)
+      for(t_vm_int i = p3 - 1; i >= 0; --i)
+         dvar_move(args + fn->size + i, args + i);
+   
+   for(t_vm_int i = 0; i < fn->size; ++i)
+      dvar_copy(args + i, fn->args + i);
+
+   t_vm_int size = args_end - args;
+
+   if(fn->syscall == VM_SYSCALL_NO)
+   {
+      vm_stack_fup(p2);
+      char* next = vm_bin_buffer_pc()
+         + VM_INS_INFOS[VM_INS_FCALL].size;
+      pcf_push_(next);
+      vm_bin_buffer_set_pc(vm_bin_buffer_begin() + fn->addr);
+   }
+
+   else
+   {
+      dvar* res = vm_syscall_exec(fn->syscall, args, size);
+      dvar_move(res, args);
+      move_pc_to_next_();
+   }
 }
 
 static void exec_ins_fret_()
@@ -103,26 +159,13 @@ static void exec_ins_bclear_()
    buffer += sizeof(t_vm_saddr);
    memcpy(&p2, buffer, sizeof(t_vm_saddr));
 
-   dvar* begin = vm_stack_sp() + p1;
-   dvar* end = begin + p2;
-   for(dvar* it = begin; it != end; ++it)
-      dvar_erase(it);
-
+   dvar* begin = vm_stack_at(p1);
+   dvar* end = vm_stack_at(p1 + p2);
+   dvar_bclear(begin, end);
    move_pc_to_next_();
 }
 
 static void exec_ins_putnull_()
-{
-   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
-   t_vm_saddr p1;
-
-   memcpy(&p1, buffer, sizeof(t_vm_saddr));
-
-   dvar_assign_null(vm_stack_at(p1));
-   move_pc_to_next_();
-}
-
-static void exec_ins_putint_()
 {
    const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
    t_vm_saddr p1;
@@ -132,7 +175,24 @@ static void exec_ins_putint_()
    buffer += sizeof(t_vm_saddr);
    memcpy(&p2, buffer, sizeof(t_vm_int));
 
-   dvar_assign_int(vm_stack_at(p1), p2);
+   dvar_putnull(vm_stack_at(p1), (t_vm_mode) p2);
+   move_pc_to_next_();
+}
+
+static void exec_ins_putint_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_int p2;
+   t_vm_int p3;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_int));
+
+   dvar_putint(vm_stack_at(p1), (t_vm_mode) p2, p3);
    move_pc_to_next_();
 }
 
@@ -140,13 +200,16 @@ static void exec_ins_putdouble_()
 {
    const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
    t_vm_saddr p1;
-   t_vm_double p2;
+   t_vm_int p2;
+   t_vm_double p3;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
-   memcpy(&p2, buffer, sizeof(t_vm_double));
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_double));
 
-   dvar_assign_double(vm_stack_at(p1), p2);
+   dvar_putdouble(vm_stack_at(p1), (t_vm_mode) p2, p3);
    move_pc_to_next_();
 }
 
@@ -154,13 +217,16 @@ static void exec_ins_putchar_()
 {
    const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
    t_vm_saddr p1;
-   t_vm_char p2;
+   t_vm_int p2;
+   t_vm_char p3;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
-   memcpy(&p2, buffer, sizeof(t_vm_char));
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_char));
 
-   dvar_assign_char(vm_stack_at(p1), p2);
+   dvar_putchar(vm_stack_at(p1), (t_vm_mode) p2, p3);
    move_pc_to_next_();
 }
 
@@ -168,13 +234,16 @@ static void exec_ins_putbool_()
 {
    const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
    t_vm_saddr p1;
-   t_vm_bool p2;
+   t_vm_int p2;
+   t_vm_bool p3;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
-   memcpy(&p2, buffer, sizeof(t_vm_bool));
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_bool));
 
-   dvar_assign_bool(vm_stack_at(p1), p2);
+   dvar_putbool(vm_stack_at(p1), (t_vm_mode) p2, p3);
    move_pc_to_next_();
 }
 
@@ -182,18 +251,115 @@ static void exec_ins_putstring_()
 {
    const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
    t_vm_saddr p1;
-   t_vm_addr p2;
+   t_vm_int p2;
+   t_vm_addr p3;
+   t_vm_int p4;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_addr));
+   buffer += sizeof(t_vm_addr);
+   memcpy(&p4, buffer, sizeof(t_vm_int));
+
+   const char* str = vm_bin_buffer_begin() + p3;
+
+   dvar_putstring(vm_stack_at(p1), (t_vm_mode) p2, str, p4);
+   move_pc_to_next_();
+}
+
+static void exec_ins_putfunction_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_int p2;
+   t_vm_addr p3;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_addr));
+
+   dvar_putfunction(vm_stack_at(p1), (t_vm_mode) p2, p3);
+   move_pc_to_next_();
+}
+
+static void exec_ins_putsyscall_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_int p2;
    t_vm_int p3;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
-   memcpy(&p2, buffer, sizeof(t_vm_addr));
-   buffer += sizeof(t_vm_addr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
    memcpy(&p3, buffer, sizeof(t_vm_int));
 
-   const char* str = vm_bin_buffer_begin() + p2;
+   dvar_putsyscall(vm_stack_at(p1), (t_vm_mode) p2, p3);
+   move_pc_to_next_();
+}
 
-   dvar_assign_string(vm_stack_at(p1), str, (size_t) p3);
+static void exec_ins_putvar_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_int p2;
+   t_vm_saddr p3;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_saddr));
+
+   dvar_putvar(vm_stack_at(p1), (t_vm_mode) p2, vm_stack_at(p3));
+   move_pc_to_next_();
+}
+
+static void exec_ins_putref_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+
+   dvar_putref(vm_stack_at(p1), vm_stack_at(p2));
+   move_pc_to_next_();
+}
+
+static void exec_ins_copy_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+
+
+   dvar_copy(vm_stack_at(p1), vm_stack_at(p2));
+   move_pc_to_next_();
+}
+
+static void exec_ins_move_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+
+   dvar_move(vm_stack_at(p1), vm_stack_at(p2));
    move_pc_to_next_();
 }
 
@@ -226,65 +392,166 @@ static void exec_ins_syscall_()
 
    memcpy(&p1, buffer, sizeof(t_vm_int));
 
-   vm_syscall_exec(p1);
+   vm_syscall_exec(p1, vm_stack_sp(), 1);
    move_pc_to_next_();
 }
 
+static void exec_ins_bind_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+   t_vm_int p3;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p3, buffer, sizeof(t_vm_int));
+
+   assert(p3 >= 0);
+
+
+   dvar_bind(vm_stack_at(p1), vm_stack_at(p2), vm_stack_at(p2 + p3));
+   move_pc_to_next_();
+}
+
+static void exec_ins_load_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_addr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_addr));
+
+   dvar* v1 = vm_stack_at(p1);
+   dvar* v2 = (dvar*) vm_bin_buffer_begin() + p2;
+
+   dvar_putref(v1, v2);
+   move_pc_to_next_();
+}
+
+static void exec_ins_store_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_addr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_addr));
+
+   dvar* v1 = vm_stack_at(p1);
+   dvar* v2 = (dvar*) vm_bin_buffer_begin() + p2;
+
+   if(v1->type == DVAR_TREF)
+      v1 = v1->v_ref;
+
+   if(v2->mode == DVAR_MCONST)
+      err("Unable to set a const global variable");
+
+   if(v2->mode == DVAR_MTCONST && v2->type != v1->type)
+      err("Unable to change type of a tconst global vaiable");
+
+   t_vm_mode mode = v2->mode;
+   dvar_copy(v2, v1);
+   v2->mode = mode;
+
+   move_pc_to_next_();
+}
+
+static void exec_ins_init_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_addr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_addr));
+
+   dvar* v1 = vm_stack_at(p1);
+   dvar* v2 = (dvar*) vm_bin_buffer_begin() + p2;
+
+   dvar_init(v2);
+   t_vm_mode mode = v1->mode;
+   dvar_copy(v2, v1);
+   v2->mode = mode;
+
+   move_pc_to_next_();
+}
+
+typedef void (*f_ins_opu_)(dvar* a, dvar* res);
+
 static void exec_ins_spe_opu_()
 {
-   static const f_dvar_opu FNS[] = {
-      (f_dvar_opu) dvar_op_postinc,
-      (f_dvar_opu) dvar_op_postdec,
-      (f_dvar_opu) dvar_op_preinc,
-      (f_dvar_opu) dvar_op_predec,
-      (f_dvar_opu) dvar_op_uplus,
-      (f_dvar_opu) dvar_op_uminus,
-      (f_dvar_opu) dvar_op_lnot
+   static const f_ins_opu_ FNS[] = {
+      (f_ins_opu_) dvar_postinc,
+      (f_ins_opu_) dvar_postdec,
+      (f_ins_opu_) dvar_preinc,
+      (f_ins_opu_) dvar_predec,
+      (f_ins_opu_) dvar_uplus,
+      (f_ins_opu_) dvar_uminus,
+      (f_ins_opu_) dvar_lnot,
+      (f_ins_opu_) dvar_bnot
    };
 
    const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
    t_vm_saddr p1;
    t_vm_saddr p2;
-   dvar* sp = vm_stack_sp();
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
    memcpy(&p2, buffer, sizeof(t_vm_saddr));
 
-   FNS[ins_code_ - VM_INS_POSTINC](sp + p1, sp + p2);
+   FNS[ins_code_ - VM_INS_POSTINC](vm_stack_at(p1), vm_stack_at(p2));
    move_pc_to_next_();
 }
+
+typedef void (*f_ins_opb_)(dvar* a, dvar* b, dvar* res);
 
 static void exec_ins_spe_opb_()
 {
 
-   static const f_dvar_opb FNS[] = {
-      (f_dvar_opb) dvar_op_mul,
-      (f_dvar_opb) dvar_op_div,
-      (f_dvar_opb) dvar_op_mod,
-      (f_dvar_opb) dvar_op_bplus,
-      (f_dvar_opb) dvar_op_bminus,
-      (f_dvar_opb) dvar_op_gt,
-      (f_dvar_opb) dvar_op_lt,
-      (f_dvar_opb) dvar_op_geq,
-      (f_dvar_opb) dvar_op_leq,
-      (f_dvar_opb) dvar_op_eq,
-      (f_dvar_opb) dvar_op_neq,
-      (f_dvar_opb) dvar_op_land,
-      (f_dvar_opb) dvar_op_lor,
-      (f_dvar_opb) dvar_op_assign,
-      (f_dvar_opb) dvar_op_pluseq,
-      (f_dvar_opb) dvar_op_minuseq,
-      (f_dvar_opb) dvar_op_muleq,
-      (f_dvar_opb) dvar_op_diveq,
-      (f_dvar_opb) dvar_op_modeq,
+   static const f_ins_opb_ FNS[] = {
+      (f_ins_opb_) dvar_mul,
+      (f_ins_opb_) dvar_div,
+      (f_ins_opb_) dvar_mod,
+      (f_ins_opb_) dvar_bplus,
+      (f_ins_opb_) dvar_bminus,
+      (f_ins_opb_) dvar_gt,
+      (f_ins_opb_) dvar_lt,
+      (f_ins_opb_) dvar_geq,
+      (f_ins_opb_) dvar_leq,
+      (f_ins_opb_) dvar_eq,
+      (f_ins_opb_) dvar_neq,
+      (f_ins_opb_) dvar_land,
+      (f_ins_opb_) dvar_lor,
+      (f_ins_opb_) dvar_lshift,
+      (f_ins_opb_) dvar_rshift,
+      (f_ins_opb_) dvar_band,
+      (f_ins_opb_) dvar_bxor,
+      (f_ins_opb_) dvar_bor,
+      (f_ins_opb_) dvar_assign,
+      (f_ins_opb_) dvar_pluseq,
+      (f_ins_opb_) dvar_minuseq,
+      (f_ins_opb_) dvar_muleq,
+      (f_ins_opb_) dvar_diveq,
+      (f_ins_opb_) dvar_modeq,
+      (f_ins_opb_) dvar_lshifteq,
+      (f_ins_opb_) dvar_rshifteq,
+      (f_ins_opb_) dvar_bandeq,
+      (f_ins_opb_) dvar_bxoreq,
+      (f_ins_opb_) dvar_boreq,
+      (f_ins_opb_) dvar_subscript
    };
 
    const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
    t_vm_saddr p1;
    t_vm_saddr p2;
    t_vm_saddr p3;
-   dvar* sp = vm_stack_sp();
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
@@ -292,7 +559,50 @@ static void exec_ins_spe_opb_()
    buffer += sizeof(t_vm_saddr);
    memcpy(&p3, buffer, sizeof(t_vm_saddr));
 
-   FNS[ins_code_ - VM_INS_MUL](sp + p1, sp + p2, sp + p3);
+   FNS[ins_code_ - VM_INS_MUL](vm_stack_at(p1), vm_stack_at(p2),
+                               vm_stack_at(p3));
+   move_pc_to_next_();
+}
+
+static void exec_ins_ternary_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+   t_vm_saddr p3;
+   t_vm_saddr p4;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p3, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p4, buffer, sizeof(t_vm_saddr));
+
+   dvar_ternary(vm_stack_at(p1),vm_stack_at(p2), vm_stack_at(p3),
+                vm_stack_at(p4));
+   move_pc_to_next_();
+}
+
+static void exec_ins_member_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_addr p2;
+   t_vm_int p3;
+   t_vm_saddr p4;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_addr));
+   buffer += sizeof(t_vm_addr);
+   memcpy(&p3, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p4, buffer, sizeof(t_vm_saddr));
+
+   dvar_member(vm_stack_at(p1), vm_bin_buffer_begin() + p2, p3,
+               vm_stack_at(p4));
    move_pc_to_next_();
 }
 
@@ -302,7 +612,7 @@ void vm_exec_init()
    pcf_ = pcf_frames_;
 
    t_vm_addr addr;
-   const char* buffer = vm_bin_buffer_begin();
+   char* buffer = vm_bin_buffer_begin();
    memcpy(&addr, buffer, sizeof(t_vm_addr));
 
    vm_bin_buffer_set_pc(buffer + addr);
@@ -316,6 +626,7 @@ void vm_exec_ins()
       exec_ins_jump_,
       exec_ins_cjump_,
       exec_ins_fjump_,
+      exec_ins_fcall_,
       exec_ins_fret_,
       exec_ins_bclear_,
       exec_ins_putnull_,
@@ -324,9 +635,19 @@ void vm_exec_ins()
       exec_ins_putchar_,
       exec_ins_putbool_,
       exec_ins_putstring_,
+      exec_ins_putfunction_,
+      exec_ins_putsyscall_,
+      exec_ins_putvar_,
+      exec_ins_putref_,
+      exec_ins_copy_,
+      exec_ins_move_,
       exec_ins_spup_,
       exec_ins_spdown_,
       exec_ins_syscall_,
+      exec_ins_bind_,
+      exec_ins_load_,
+      exec_ins_store_,
+      exec_ins_init_,
       exec_ins_spe_opu_,
       exec_ins_spe_opu_,
       exec_ins_spe_opu_,
@@ -334,6 +655,7 @@ void vm_exec_ins()
       exec_ins_spe_opu_,
       exec_ins_spe_opu_,
       exec_ins_spe_opu_,
+      exec_ins_spe_opu_,
       exec_ins_spe_opb_,
       exec_ins_spe_opb_,
       exec_ins_spe_opb_,
@@ -353,6 +675,19 @@ void vm_exec_ins()
       exec_ins_spe_opb_,
       exec_ins_spe_opb_,
       exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_spe_opb_,
+      exec_ins_ternary_,
+      exec_ins_member_
    };
 
    memcpy(&ins_code_, vm_bin_buffer_pc(), sizeof(t_vm_ins));

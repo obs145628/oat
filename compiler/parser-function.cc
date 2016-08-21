@@ -44,5 +44,5 @@ ASTFunctionDef* Parser::function_def()
 
    next();
    ASTStatementsBlock* body = statement();
-   return new ASTFunctionDef(t, name, args, body);
+   return new ASTFunctionDef(t, name, args, body, true, 0);
 }

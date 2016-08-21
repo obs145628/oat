@@ -159,6 +159,36 @@ void ASTVisitor::visit(ASTOpLnot* e)
    visitDefault(e);
 }
 
+void ASTVisitor::visit(ASTOpBnot* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpLshift* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpRshift* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpBand* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpBxor* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpBor* e)
+{
+   visitDefault(e);
+}
+
 void ASTVisitor::visit(ASTOpAssign* e)
 {
    visitDefault(e);
@@ -185,6 +215,51 @@ void ASTVisitor::visit(ASTOpDiveq* e)
 }
 
 void ASTVisitor::visit(ASTOpModeq* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpLshifteq* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpRshifteq* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpBandeq* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpBxoreq* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpBoreq* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpTernary* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpSubscript* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpMember* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTOpNew* e)
 {
    visitDefault(e);
 }
@@ -219,12 +294,37 @@ void ASTVisitor::visit(ASTStatementWhile* e)
    visitDefault(e);
 }
 
-void ASTVisitor::visit(ASTFunctionDef* e)
+void ASTVisitor::visit(ASTStatementDo* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTStatementFor* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTStatementBreak* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTStatementContinue* e)
 {
    visitDefault(e);
 }
 
 void ASTVisitor::visit(ASTModule* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTFunctionDef* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTGlobalDef* e)
 {
    visitDefault(e);
 }

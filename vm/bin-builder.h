@@ -4,6 +4,9 @@
 # ifdef __cplusplus
 extern "C"
 {
+#  if 0
+}
+#  endif
 # endif
 
 # include "parray.h"
@@ -21,6 +24,7 @@ typedef struct {
 } s_bin_builder;
 
 typedef struct {
+   t_vm_int type;
    union {
       const char* p_label;
       t_vm_addr p_addr;
@@ -42,6 +46,8 @@ void bin_builder_add_double(s_bin_builder* b, const char* label, t_vm_double x);
 void bin_builder_add_char(s_bin_builder* b, const char* label, t_vm_char x);
 void bin_builder_add_bool(s_bin_builder* b, const char* label, t_vm_bool x);
 void bin_builder_add_string(s_bin_builder* b, const char* label, const char* x);
+void bin_builder_add_space(s_bin_builder* b, const char* label, t_vm_addr len);
+void bin_builder_add_var(s_bin_builder* b, const char* label);
 
 void bin_builder_addi_nop(s_bin_builder* b, const char* label);
 void bin_builder_addi_jump(s_bin_builder* b, const char* label,
@@ -50,28 +56,56 @@ void bin_builder_addi_cjump(s_bin_builder* b, const char* label,
                             t_vm_saddr saddr, const char* addrLabel);
 void bin_builder_addi_fjump(s_bin_builder* b, const char* label,
                             const char* addrLabel, t_vm_saddr faddr);
+void bin_builder_addi_fcall(s_bin_builder* b, const char* label,
+                            t_vm_saddr saddr, t_vm_saddr pos, t_vm_int size);
 void bin_builder_addi_fret(s_bin_builder* b, const char* label);
 void bin_builder_addi_bclear(s_bin_builder* b, const char* label,
                              t_vm_saddr saddr, t_vm_saddr size);
 void bin_builder_addi_putnull(s_bin_builder* b, const char* label,
-                              t_vm_saddr saddr);
+                              t_vm_saddr saddr, t_vm_int mode);
 void bin_builder_addi_putint(s_bin_builder* b, const char* label,
-                             t_vm_saddr saddr, t_vm_int value);
+                             t_vm_saddr saddr, t_vm_int mode,  t_vm_int value);
 void bin_builder_addi_putdouble(s_bin_builder* b, const char* label,
-                                t_vm_saddr saddr, t_vm_double value);
+                                t_vm_saddr saddr, t_vm_int mode,
+                                t_vm_double value);
 void bin_builder_addi_putchar(s_bin_builder* b, const char* label,
-                              t_vm_saddr saddr, t_vm_char value);
+                              t_vm_saddr saddr, t_vm_int mode,
+                              t_vm_char value);
 void bin_builder_addi_putbool(s_bin_builder* b, const char* label,
-                              t_vm_saddr saddr, t_vm_bool value);
+                              t_vm_saddr saddr, t_vm_int mode,
+                              t_vm_bool value);
 void bin_builder_addi_putstring(s_bin_builder* b, const char* label,
-                                t_vm_saddr saddr, const char* addrLabel,
-                                t_vm_int size);
+                                t_vm_saddr saddr, t_vm_int mode,
+                                const char* addrLabel, t_vm_int size);
+void bin_builder_addi_putfunction(s_bin_builder* b, const char* label,
+                                  t_vm_saddr saddr, t_vm_int mode,
+                                  const char* addrLabel);
+void bin_builder_addi_putsyscall(s_bin_builder* b, const char* label,
+                                 t_vm_saddr saddr, t_vm_int mode,
+                                 t_vm_int syscall);
+void bin_builder_addi_putvar(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, t_vm_int mode,
+                             t_vm_saddr src);
+void bin_builder_addi_putref(s_bin_builder* b, const char* label,
+                             t_vm_saddr dst, t_vm_saddr src);
+void bin_builder_addi_copy(s_bin_builder* b, const char* label,
+                            t_vm_saddr dst, t_vm_saddr src);
+void bin_builder_addi_move(s_bin_builder* b, const char* label,
+                           t_vm_saddr dst, t_vm_saddr src);
 void bin_builder_addi_spup(s_bin_builder* b, const char* label,
                               t_vm_saddr saddr);
 void bin_builder_addi_spdown(s_bin_builder* b, const char* label,
                               t_vm_saddr saddr);
 void bin_builder_addi_syscall(s_bin_builder* b, const char* label,
                               t_vm_int value);
+void bin_builder_addi_bind(s_bin_builder* b, const char* label,
+                           t_vm_saddr dst, t_vm_saddr it, t_vm_int size);
+void bin_builder_addi_load(s_bin_builder* b, const char* label,
+                           t_vm_saddr dst, const char* srcLabel);
+void bin_builder_addi_store(s_bin_builder* b, const char* label,
+                           t_vm_saddr src, const char* dstLabel);
+void bin_builder_addi_init(s_bin_builder* b, const char* label,
+                           t_vm_saddr src, const char* dstLabel);
 
 void bin_builder_addi_postinc(s_bin_builder* b, const char* label,
                               t_vm_saddr a1, t_vm_saddr a2);
@@ -86,6 +120,8 @@ void bin_builder_addi_uplus(s_bin_builder* b, const char* label,
 void bin_builder_addi_uminus(s_bin_builder* b, const char* label,
                              t_vm_saddr a1, t_vm_saddr a2);
 void bin_builder_addi_lnot(s_bin_builder* b, const char* label,
+                           t_vm_saddr a1, t_vm_saddr a2);
+void bin_builder_addi_bnot(s_bin_builder* b, const char* label,
                            t_vm_saddr a1, t_vm_saddr a2);
 void bin_builder_addi_mul(s_bin_builder* b, const char* label,
                           t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
@@ -113,6 +149,16 @@ void bin_builder_addi_land(s_bin_builder* b, const char* label,
                            t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
 void bin_builder_addi_lor(s_bin_builder* b, const char* label,
                           t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_lshift(s_bin_builder* b, const char* label,
+                             t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_rshift(s_bin_builder* b, const char* label,
+                             t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_band(s_bin_builder* b, const char* label,
+                           t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_bxor(s_bin_builder* b, const char* label,
+                           t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_bor(s_bin_builder* b, const char* label,
+                          t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
 void bin_builder_addi_assign(s_bin_builder* b, const char* label,
                              t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
 void bin_builder_addi_pluseq(s_bin_builder* b, const char* label,
@@ -125,6 +171,24 @@ void bin_builder_addi_diveq(s_bin_builder* b, const char* label,
                             t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
 void bin_builder_addi_modeq(s_bin_builder* b, const char* label,
                             t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_lshifteq(s_bin_builder* b, const char* label,
+                               t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_rshiftqeq(s_bin_builder* b, const char* label,
+                                t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_bandeq(s_bin_builder* b, const char* label,
+                             t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_bxoreq(s_bin_builder* b, const char* label,
+                             t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_boreq(s_bin_builder* b, const char* label,
+                            t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_subscript(s_bin_builder* b, const char* label,
+                                t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+void bin_builder_addi_ternary(s_bin_builder* b, const char* label,
+                              t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3,
+                              t_vm_saddr a4);
+void bin_builder_addi_member(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, const char* strLabel,
+                             t_vm_int size,  t_vm_saddr res);
 
 void bin_builder_addia0(s_bin_builder* b, const char* label, t_vm_ins code);
 void bin_builder_addia1(s_bin_builder* b, const char* label, t_vm_ins code,
@@ -141,6 +205,11 @@ void bin_builder_addia5(s_bin_builder* b, const char* label, t_vm_ins code,
                         s_bin_builder_arg a1, s_bin_builder_arg a2,
                         s_bin_builder_arg a3, s_bin_builder_arg a4,
                         s_bin_builder_arg a5);
+
+void bin_builder_add_opu(s_bin_builder* b, const char* label, t_vm_ins code,
+                         t_vm_saddr a1, t_vm_saddr a2);
+void bin_builder_add_opb(s_bin_builder* b, const char* label, t_vm_ins code,
+                         t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
 
 void bin_builder_save(s_bin_builder* b, const char* outPath);
 

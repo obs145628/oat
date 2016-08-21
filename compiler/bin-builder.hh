@@ -19,7 +19,7 @@ public:
 
    void saveToFile(const std::string& outPath);
 
-   std::string getUniqueLabel();
+   std::string getUniqueLabel(const std::string& prefix = "");
 
    s_bin_builder_arg aLabel(const std::string& x);
    s_bin_builder_arg aAdddr(t_vm_addr x);
@@ -39,6 +39,10 @@ public:
    void addBool(const std::string& label, t_vm_bool x);
    void addString(const std::string& x);
    void addString(const std::string& label, const std::string& x);
+   void addSpace(t_vm_addr len);
+   void addSpace(const std::string& label, t_vm_addr len);
+   void addVar();
+   void addVar(const std::string& label);
 
    std::string addSharedString(const std::string& x);
 
@@ -46,18 +50,32 @@ public:
    void addiJump(const std::string& addrLabel);
    void addiCjump(t_vm_saddr saddr, const std::string& addrLabel);
    void addiFjump(const std::string& addrLabel, t_vm_saddr saddr);
+   void addiFcall(t_vm_saddr saddr, t_vm_saddr pos, t_vm_int size);
    void addiFret();
    void addiBclear(t_vm_saddr saddr, t_vm_saddr size);
-   void addiPutnull(t_vm_saddr saddr);
-   void addiPutint(t_vm_saddr saddr, t_vm_int value);
-   void addiPutdouble(t_vm_saddr saddr, t_vm_double value);
-   void addiPutchar(t_vm_saddr saddr, t_vm_char value);
-   void addiPutbool(t_vm_saddr saddr, t_vm_bool value);
-   void addiPutstring(t_vm_saddr saddr, const std::string& addrLabel,
-                      t_vm_int size);
+   void addiPutnull(t_vm_saddr saddr, t_vm_int mode);
+   void addiPutint(t_vm_saddr saddr, t_vm_int mode, t_vm_int value);
+   void addiPutdouble(t_vm_saddr saddr, t_vm_int mode, t_vm_double value);
+   void addiPutchar(t_vm_saddr saddr, t_vm_int mode, t_vm_char value);
+   void addiPutbool(t_vm_saddr saddr, t_vm_int mode, t_vm_bool value);
+   void addiPutstring(t_vm_saddr saddr, t_vm_int mode,
+                      const std::string& addrLabel, t_vm_int size);
+   void addiPutfunction(t_vm_saddr saddr, t_vm_int mode,
+                      const std::string& addrLabel);
+   void addiPutsyscall(t_vm_saddr saddr, t_vm_int mode,
+                      t_vm_int syscall);
+   void addiPutvar(t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr src);
+   void addiPutref(t_vm_saddr dst, t_vm_saddr src);
+   void addiCopy(t_vm_saddr dst, t_vm_saddr src);
+   void addiMove(t_vm_saddr dst, t_vm_saddr src);
    void addiSpup(t_vm_saddr saddr);
    void addiSpdown(t_vm_saddr saddr);
    void addiSyscall(t_vm_int value);
+   void addiBind(t_vm_saddr dst, t_vm_saddr it, t_vm_int size);
+   void addiLoad(t_vm_saddr dst, const std::string& srcLabel);
+   void addiStore(t_vm_saddr src, const std::string& dstLabel);
+   void addiInit(t_vm_saddr src, const std::string& dstLabel);
    void addiPostinc(t_vm_saddr a1, t_vm_saddr a2);
    void addiPostdec(t_vm_saddr a1, t_vm_saddr a2);
    void addiPreinc(t_vm_saddr a1, t_vm_saddr a2);
@@ -65,6 +83,7 @@ public:
    void addiUplus(t_vm_saddr a1, t_vm_saddr a2);
    void addiUminus(t_vm_saddr a1, t_vm_saddr a2);
    void addiLnot(t_vm_saddr a1, t_vm_saddr a2);
+   void addiBnot(t_vm_saddr a1, t_vm_saddr a2);
    void addiMul(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiDiv(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiMod(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
@@ -78,12 +97,27 @@ public:
    void addiNeq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiLand(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiLor(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiLshift(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiRshift(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBand(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBxor(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBor(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiAssign(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiPluseq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiMinuseq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiMuleq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiDiveq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
    void addiModeq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiLshifteq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiRshifteq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBandeq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBxoreq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiBoreq(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiSubscript(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
+   void addiTernary(t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3,
+                     t_vm_saddr a4);
+   void addiMember(t_vm_saddr saddr, const std::string& strLabel,
+                   t_vm_int size, t_vm_saddr res);
 
    void addiNop(const std::string& label);
    void addiJump(const std::string& label, const std::string& addrLabel);
@@ -94,16 +128,16 @@ public:
    void addiFret(const std::string& label);
    void addiBclear(const std::string& label, t_vm_saddr saddr,
                    t_vm_saddr size);
-   void addiPutnull(const std::string& label, t_vm_saddr saddr);
-   void addiPutint(const std::string& label, t_vm_saddr saddr,
+   void addiPutnull(const std::string& label, t_vm_saddr saddr, t_vm_int mode);
+   void addiPutint(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
                    t_vm_int value);
-   void addiPutdouble(const std::string& label, t_vm_saddr saddr,
+   void addiPutdouble(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
                       t_vm_double value);
-   void addiPutchar(const std::string& label, t_vm_saddr saddr,
+   void addiPutchar(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
                     t_vm_char value);
-   void addiPutbool(const std::string& label, t_vm_saddr saddr,
+   void addiPutbool(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
                     t_vm_bool value);
-   void addiPutstring(const std::string& label, t_vm_saddr saddr,
+   void addiPutstring(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
                       const std::string& addrLabel, t_vm_int size);
    void addiSpup(const std::string& label, t_vm_saddr saddr);
    void addiSpdown(const std::string& label, t_vm_saddr saddr);

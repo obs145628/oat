@@ -31,7 +31,7 @@ namespace chars
 
    bool isUpper(char c)
    {
-      return c >= '0' && c <= '9';
+      return c >= 'A' && c <= 'Z';
    }
 
    bool isLetter(char c)

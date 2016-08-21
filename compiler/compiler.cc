@@ -40,35 +40,16 @@ void Compiler::buildTree()
 
 void Compiler::precheck()
 {
-   ASTVisitorPrecheck{_state};
-   RuntimeScope* scope = _state->scope();
-
-   if(!scope->hasFunction("main"))
-      _state->tokenError("main function missing");
-
-   ASTFunctionDef* mainFunction = scope->getFunction("main");
-   if(mainFunction->argsSize() != 0)
-      _state->getChild(mainFunction)->tokenError(
-                 "main function must takes 0 arguments but receives "
-                 + std::to_string(mainFunction->argsSize())
-                 + " arguments");
+   ASTVisitorPrecheck {_state, &_builder};
 }
 
 void Compiler::check()
 {
-   ASTVisitorCheck {_state};
+   ASTVisitorCheck {_state, &_builder};
 }
 
 void Compiler::compile()
 {
-   _builder.addiFjump("_main", "main", 0);
-
-   _builder.addiPutnull(1);
-   _builder.addiNeq(0, 1, 1);
-   _builder.addiCjump(1, "_main_end");
-   _builder.addiPutint(0, 0);
-   _builder.addiSyscall("_main_end", VM_SYSCALL_EXIT);
-
    ASTVisitorCompile {_state, &_builder};
 }
 

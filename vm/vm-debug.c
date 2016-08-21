@@ -51,6 +51,22 @@ static void print_ins_fjump_(t_vm_addr addr)
    printf("fjump %zu, %zu\n", (size_t) p1, (size_t) p2);
 }
 
+static void print_ins_fcall_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+   t_vm_int p3;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p3, buffer, sizeof(t_vm_int));
+
+   printf("fcall %zu, %zu, %ld\n", (size_t) p1, (size_t) p2, (long) p3);
+}
+
 static void print_ins_fret_(t_vm_addr addr)
 {
    (void) addr;
@@ -74,10 +90,13 @@ static void print_ins_putnull_(t_vm_addr addr)
 {
    const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
    t_vm_saddr p1;
+   t_vm_int p2;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
 
-   printf("putnull %zu\n", (size_t) p1);
+   printf("putnull %zu, %d\n", (size_t) p1, (int) p2);
 }
 
 static void print_ins_putint_(t_vm_addr addr)
@@ -85,69 +104,172 @@ static void print_ins_putint_(t_vm_addr addr)
    const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
    t_vm_saddr p1;
    t_vm_int p2;
+   t_vm_int p3;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
    memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_int));
 
-   printf("putint %zu, %ld\n", (size_t) p1, (long) p2);
+   printf("putint %zu, %d, %ld\n", (size_t) p1, (int) p2, (long) p3);
 }
 
 static void print_ins_putdouble_(t_vm_addr addr)
 {
    const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
    t_vm_saddr p1;
-   t_vm_double p2;
+   t_vm_int p2;
+   t_vm_double p3;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
-   memcpy(&p2, buffer, sizeof(t_vm_double));
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_double));
 
-   printf("putdouble %zu, %G\n", (size_t) p1, (double) p2);
+   printf("putdouble %zu, %d, %G\n", (size_t) p1, (int) p2, (double) p3);
 }
 
 static void print_ins_putchar_(t_vm_addr addr)
 {
    const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
    t_vm_saddr p1;
-   t_vm_char p2;
+   t_vm_int p2;
+   t_vm_char p3;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
-   memcpy(&p2, buffer, sizeof(t_vm_char));
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_char));
 
-   printf("putchar %zu, %c\n", (size_t) p1, (char) p2);
+   printf("putchar %zu, %d, %c\n", (size_t) p1, (int) p2, (char) p3);
 }
 
 static void print_ins_putbool_(t_vm_addr addr)
 {
    const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
    t_vm_saddr p1;
-   t_vm_bool p2;
+   t_vm_int p2;
+   t_vm_bool p3;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
-   memcpy(&p2, buffer, sizeof(t_vm_bool));
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_bool));
 
-   printf("putbool %zu, %d\n", (size_t) p1, (int) p2);
+   printf("putbool %zu, %d, %d\n", (size_t) p1, (int) p2, (int) p3);
 }
 
 static void print_ins_putstring_(t_vm_addr addr)
 {
    const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
    t_vm_saddr p1;
-   t_vm_addr p2;
+   t_vm_int p2;
+   t_vm_addr p3;
+   t_vm_int p4;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_addr));
+   buffer += sizeof(t_vm_addr);
+   memcpy(&p4, buffer, sizeof(t_vm_int));
+
+   printf("putstring %zu, %d, %zu, %ld (\"", (size_t) p1, (int) p2,
+          (size_t) p3, (long) p4);
+   fwrite(vm_bin_buffer_begin() + p3, 1, (size_t) p4, stdout);
+   printf("\")\n");
+}
+
+static void print_ins_putfunction_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_int p2;
+   t_vm_addr p3;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_addr));
+
+   printf("putfunction %zu, %d, %zu\n", (size_t) p1, (int) p2, (size_t) p3);
+}
+
+static void print_ins_putsyscall_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_int p2;
    t_vm_int p3;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
-   memcpy(&p2, buffer, sizeof(t_vm_addr));
-   buffer += sizeof(t_vm_addr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
    memcpy(&p3, buffer, sizeof(t_vm_int));
 
-   printf("putstring %zu, %zu, %ld (\"", (size_t) p1, (size_t) p2, (long) p3);
-   fwrite(vm_bin_buffer_begin() + p2, 1, (size_t) p3, stdout);
-   printf("\")\n");
+   printf("putsyscall %zu, %d, %ld\n", (size_t) p1, (int) p2, (long) p3);
+}
+
+static void print_ins_putvar_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_int p2;
+   t_vm_saddr p3;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p3, buffer, sizeof(t_vm_saddr));
+
+   printf("putvar %zu, %d, %zu\n", (size_t) p1, (int) p2, (size_t) p3);
+}
+
+static void print_ins_putref_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+
+   printf("putref %zu, %zu\n", (size_t) p1, (size_t) p2);
+}
+
+static void print_ins_copy_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+
+   printf("copy %zu, %zu\n", (size_t) p1, (size_t) p2);
+}
+
+static void print_ins_move_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+
+   printf("move %zu, %zu\n", (size_t) p1, (size_t) p2);
 }
 
 static void print_ins_spup_(t_vm_addr addr)
@@ -178,6 +300,61 @@ static void print_ins_syscall_(t_vm_addr addr)
    memcpy(&p1, buffer, sizeof(t_vm_int));
 
    printf("syscall %ld\n", (long) p1);
+}
+
+static void print_ins_bind_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+   t_vm_int p3;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p3, buffer, sizeof(t_vm_int));
+
+   printf("bind %zu, %zu, %ld\n", (size_t) p1, (size_t) p2, (long) p3);
+}
+
+static void print_ins_load_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_addr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_addr));
+
+   printf("load %zu, %zu\n", (size_t) p1, (size_t) p2);
+}
+
+static void print_ins_store_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_addr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_addr));
+
+   printf("store %zu, %zu\n", (size_t) p1, (size_t) p2);
+}
+
+static void print_ins_init_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_addr p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_addr));
+
+   printf("init %zu, %zu\n", (size_t) p1, (size_t) p2);
 }
 
 static void print_ins_spe_opu_(t_vm_addr addr)
@@ -216,6 +393,53 @@ static void print_ins_spe_opb_(t_vm_addr addr)
           (size_t) p1, (size_t) p2, (size_t) p3);
 }
 
+static void print_ins_ternary_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr;
+   t_vm_ins code;
+   t_vm_saddr p1;
+   t_vm_saddr p2;
+   t_vm_saddr p3;
+   t_vm_saddr p4;
+
+   memcpy(&code, buffer, sizeof(t_vm_ins));
+   buffer += sizeof(t_vm_ins);
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p3, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p4, buffer, sizeof(t_vm_saddr));
+
+   printf("ternary %zu, %zu, %zu, %zu\n", (size_t) p1, (size_t) p2,
+          (size_t) p3, (size_t) p4);
+}
+
+static void print_ins_member_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+   t_vm_addr p2;
+   t_vm_int p3;
+   t_vm_saddr p4;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+   buffer += sizeof(t_vm_saddr);
+   memcpy(&p2, buffer, sizeof(t_vm_addr));
+   buffer += sizeof(t_vm_addr);
+   memcpy(&p3, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p4, buffer, sizeof(t_vm_saddr));
+
+   printf("member %zu, %zu, %ld, %zu (\"", (size_t) p1, (size_t) p2,
+          (long) p3, (size_t) p4);
+   fwrite(vm_bin_buffer_begin() + p2, 1, (size_t) p3, stdout);
+   printf("\")\n");
+}
+
+
+
 static void print_ins_(t_vm_addr addr)
 {
    static const f_print_ins_ FNS[] = {
@@ -223,6 +447,7 @@ static void print_ins_(t_vm_addr addr)
       print_ins_jump_,
       print_ins_cjump_,
       print_ins_fjump_,
+      print_ins_fcall_,
       print_ins_fret_,
       print_ins_bclear_,
       print_ins_putnull_,
@@ -231,9 +456,19 @@ static void print_ins_(t_vm_addr addr)
       print_ins_putchar_,
       print_ins_putbool_,
       print_ins_putstring_,
+      print_ins_putfunction_,
+      print_ins_putsyscall_,
+      print_ins_putvar_,
+      print_ins_putref_,
+      print_ins_copy_,
+      print_ins_move_,
       print_ins_spup_,
       print_ins_spdown_,
       print_ins_syscall_,
+      print_ins_bind_,
+      print_ins_load_,
+      print_ins_store_,
+      print_ins_init_,
       print_ins_spe_opu_,
       print_ins_spe_opu_,
       print_ins_spe_opu_,
@@ -241,6 +476,7 @@ static void print_ins_(t_vm_addr addr)
       print_ins_spe_opu_,
       print_ins_spe_opu_,
       print_ins_spe_opu_,
+      print_ins_spe_opu_,
       print_ins_spe_opb_,
       print_ins_spe_opb_,
       print_ins_spe_opb_,
@@ -259,7 +495,20 @@ static void print_ins_(t_vm_addr addr)
       print_ins_spe_opb_,
       print_ins_spe_opb_,
       print_ins_spe_opb_,
-      print_ins_spe_opb_
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_spe_opb_,
+      print_ins_ternary_,
+      print_ins_member_
    };
    t_vm_ins code;
    memcpy(&code, vm_bin_buffer_begin() + addr, sizeof(t_vm_ins));

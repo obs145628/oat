@@ -1,13 +1,13 @@
-#include "vm-bin.h"
+ #include "vm-bin.h"
 #include <string.h>
 #include <assert.h>
 #include "fs.h"
 
 #include <stdio.h>
 
-static const char* buffer_begin_ = NULL;
-static const char* buffer_end_ = NULL;
-static const char* buffer_pc_ = NULL;
+static char* buffer_begin_ = NULL;
+static char* buffer_end_ = NULL;
+static char* buffer_pc_ = NULL;
 static size_t buffer_size_;
 
 void vm_bin_load_file(const char* binPath)
@@ -19,19 +19,19 @@ void vm_bin_load_file(const char* binPath)
    buffer_pc_ = buffer_begin_;
 }
 
-const char* vm_bin_buffer_begin()
+char* vm_bin_buffer_begin()
 {
    assert(buffer_begin_);
    return buffer_begin_;
 }
 
-const char* vm_bin_buffer_end()
+char* vm_bin_buffer_end()
 {
    assert(buffer_end_);
    return buffer_end_;
 }
 
-const char* vm_bin_buffer_pc()
+char* vm_bin_buffer_pc()
 {
    assert(buffer_pc_);
    return buffer_pc_;
@@ -50,7 +50,7 @@ void vm_bin_buffer_read(char* dst, size_t len)
    memcpy(dst, buffer_pc_, len);
 }
 
-void vm_bin_buffer_set_pc(const char* pc)
+void vm_bin_buffer_set_pc(char* pc)
 {
    assert(buffer_pc_);
    assert(pc >= buffer_begin_ && pc <= buffer_end_);

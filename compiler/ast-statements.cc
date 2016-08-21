@@ -26,10 +26,20 @@ void ASTStatementEmpty::accept(ASTVisitor& v)
    v.visit(this);
 }
 
-ASTStatementDefine::ASTStatementDefine(Token t, ASTSymbol* symbol, AST* value)
-   : AST(t, {symbol, value})
+ASTStatementDefine::ASTStatementDefine(Token t, ASTSymbol* symbol, AST* value,
+   bool isConst)
+   : AST(t, {symbol, value}), _const(isConst)
 {
-   assert(t.getType() == TokenType::si_define);
+   if(_const)
+      assert(t.getType() == TokenType::kw_const);
+   else
+      assert(t.getType() == TokenType::kw_let);
+}
+
+ASTStatementDefine::ASTStatementDefine(Token t, ASTSymbol* symbol)
+   : AST(t, {symbol}), _const(false)
+{
+   assert(t.getType() == TokenType::kw_let);
 }
 
 void ASTStatementDefine::accept(ASTVisitor& v)
@@ -45,6 +55,16 @@ ASTSymbol* ASTStatementDefine::getSymbol() const
 AST* ASTStatementDefine::getValue() const
 {
    return _children[1];
+}
+
+bool ASTStatementDefine::hasValue() const
+{
+   return _children.size() > 1;
+}
+
+bool ASTStatementDefine::isConst() const
+{
+   return _const;
 }
 
 ASTStatementReturn::ASTStatementReturn(Token t, AST* value)
@@ -126,4 +146,81 @@ AST* ASTStatementWhile::getCondition() const
 ASTStatementsBlock* ASTStatementWhile::getWhileStatement() const
 {
    return dynamic_cast<ASTStatementsBlock*> (_children[1]);
+}
+
+ASTStatementDo::ASTStatementDo(Token t, AST* condition,
+                               ASTStatementsBlock* doStatement)
+   : AST(t, {condition, doStatement})
+{
+   assert(t.getType() == TokenType::kw_do);
+}
+
+void ASTStatementDo::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+AST* ASTStatementDo::getCondition() const
+{
+   return _children[0];
+}
+
+ASTStatementsBlock* ASTStatementDo::getDoStatement() const
+{
+   return dynamic_cast<ASTStatementsBlock*> (_children[1]);
+}
+
+
+ASTStatementFor::ASTStatementFor(Token t, AST* init, AST* condition, AST* inc,
+                               ASTStatementsBlock* forStatement)
+   : AST(t, {init, condition, inc, forStatement})
+{
+   assert(t.getType() == TokenType::kw_for);
+}
+
+void ASTStatementFor::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+AST* ASTStatementFor::getInit() const
+{
+   return _children[0];
+}
+
+AST* ASTStatementFor::getCondition() const
+{
+   return _children[1];
+}
+
+AST* ASTStatementFor::getInc() const
+{
+   return _children[2];
+}
+
+ASTStatementsBlock* ASTStatementFor::getForStatement() const
+{
+   return dynamic_cast<ASTStatementsBlock*> (_children[3]);
+}
+
+ASTStatementBreak::ASTStatementBreak(Token t)
+   : AST(t, {})
+{
+   assert(t.getType() == TokenType::kw_break);
+}
+
+void ASTStatementBreak::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTStatementContinue::ASTStatementContinue(Token t)
+   : AST(t, {})
+{
+   assert(t.getType() == TokenType::kw_continue);
+}
+
+void ASTStatementContinue::accept(ASTVisitor& v)
+{
+   v.visit(this);
 }

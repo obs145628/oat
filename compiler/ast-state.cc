@@ -73,6 +73,14 @@ ASTState* ASTState::parent() const
    return _parent;
 }
 
+ASTState* ASTState::root()
+{
+   ASTState* root = this;
+   while(root->_parent)
+      root = root->_parent;
+   return root;
+}
+
 std::vector<ASTState*> ASTState::children() const
 {
    return _children;
@@ -120,6 +128,18 @@ void ASTState::addVar(t_vm_saddr v)
 {
    _vars.push_back(v);
 }
+
+std::string ASTState::getLabel(std::size_t pos) const
+{
+   assert(pos < _labels.size());
+   return _labels[pos];
+}
+
+void ASTState::addLabel(const std::string& label)
+{
+   _labels.push_back(label);
+}
+
 
 void ASTState::tokenError(const std::string& message)
 {

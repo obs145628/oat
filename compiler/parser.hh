@@ -12,7 +12,12 @@ class ASTStatementDefine;
 class ASTStatementReturn;
 class ASTStatementIf;
 class ASTStatementWhile;
+class ASTStatementDo;
+class ASTStatementFor;
+class ASTStatementBreak;
+class ASTStatementContinue;
 class ASTFunctionDef;
+class ASTGlobalDef;
 class ASTModule;
 
 class Scanner;
@@ -29,6 +34,11 @@ private:
    Scanner* _scanner;
 
    AST* expr();
+   AST* expr_p14();
+   AST* expr_p13();
+   AST* expr_p12();
+   AST* expr_p11();
+   AST* expr_p10();
    AST* expr_p9();
    AST* expr_p8();
    AST* expr_p7();
@@ -50,11 +60,18 @@ private:
    ASTStatementReturn* statement_return();
    ASTStatementIf* statement_if();
    ASTStatementWhile* statement_while();
+   ASTStatementDo* statement_do();
+   ASTStatementFor* statement_for();
+   ASTStatementBreak* statement_break();
+   ASTStatementContinue* statement_continue();
    AST* statement_expr();
 
    ASTFunctionDef* function_def();
 
    ASTModule* module();
+   void component(std::vector<AST*>& child);
+
+   ASTGlobalDef* global_def();
 
 
 

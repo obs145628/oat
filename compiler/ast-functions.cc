@@ -6,8 +6,9 @@
 
 ASTFunctionDef::ASTFunctionDef(Token token, ASTSymbol* name,
                                const std::vector<ASTSymbol*>& args,
-                               ASTStatementsBlock* statement)
-   : AST(token)
+                               ASTStatementsBlock* statement,
+                               bool exported, int module)
+   : ASTComponent(token, {}, exported, module)
 {
    assert(token.getType() == TokenType::symbol);
 

@@ -1,5 +1,6 @@
 #include "ast-operators.hh"
 #include "ast-visitor.hh"
+#include "ast-values.hh"
 #include <cassert>
 
 
@@ -283,6 +284,72 @@ void ASTOpLnot::accept(ASTVisitor& v)
    v.visit(this);
 }
 
+ASTOpBnot::ASTOpBnot(Token token, AST* op)
+   : ASTOpUnary(token, op)
+{
+   assert(token.getType() == TokenType::op_bnot);
+}
+
+void ASTOpBnot::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpLshift::ASTOpLshift(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_lshift);
+}
+
+void ASTOpLshift::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpRshift::ASTOpRshift(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_rshift);
+}
+
+void ASTOpRshift::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpBand::ASTOpBand(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_band);
+}
+
+void ASTOpBand::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpBxor::ASTOpBxor(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_bxor);
+}
+
+void ASTOpBxor::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpBor::ASTOpBor(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_bor);
+}
+
+void ASTOpBor::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
 ASTOpAssign::ASTOpAssign(Token token, AST* op1, AST* op2)
    : ASTOpBinary(token, op1, op2)
 {
@@ -347,4 +414,157 @@ ASTOpModeq::ASTOpModeq(Token token, AST* op1, AST* op2)
 void ASTOpModeq::accept(ASTVisitor& v)
 {
    v.visit(this);
+}
+
+ASTOpLshifteq::ASTOpLshifteq(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_lshifteq);
+}
+
+void ASTOpLshifteq::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+
+ASTOpRshifteq::ASTOpRshifteq(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_rshifteq);
+}
+
+void ASTOpRshifteq::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpBandeq::ASTOpBandeq(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_bandeq);
+}
+
+void ASTOpBandeq::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpBxoreq::ASTOpBxoreq(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_bxoreq);
+}
+
+void ASTOpBxoreq::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpBoreq::ASTOpBoreq(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::op_boreq);
+}
+
+void ASTOpBoreq::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpTernary::ASTOpTernary(Token token, AST* op1, AST* op2, AST* op3)
+   : AST(token, {op1, op2, op3})
+{
+   assert(token.getType() == TokenType::qmark);
+}
+
+AST* ASTOpTernary::op1() const
+{
+   return _children[0];
+}
+
+AST* ASTOpTernary::op2() const
+{
+   return _children[1];
+}
+
+AST* ASTOpTernary::op3() const
+{
+   return _children[2];
+}
+
+void ASTOpTernary::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpSubscript::ASTOpSubscript(Token token, AST* op1, AST* op2)
+   : ASTOpBinary(token, op1, op2)
+{
+   assert(token.getType() == TokenType::lbracket);
+}
+
+void ASTOpSubscript::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTOpMember::ASTOpMember(Token token, AST* op1, ASTSymbol* op2)
+   : AST(token, {op1, op2})
+{
+   assert(token.getType() == TokenType::op_dot);
+}
+
+AST* ASTOpMember::op1() const
+{
+   return _children[0];
+}
+
+ASTSymbol* ASTOpMember::op2() const
+{
+   return dynamic_cast<ASTSymbol*> (_children[1]);
+}
+
+std::string ASTOpMember::getMember() const
+{
+   return op2()->getName();
+}
+
+void ASTOpMember::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+
+ASTOpNew::ASTOpNew(Token token, const std::vector<AST*>& children)
+   : AST(token, children)
+{
+   assert(token.getType() == TokenType::op_new);
+   assert(children.size() > 0);
+}
+
+void ASTOpNew::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTSymbol* ASTOpNew::left() const
+{
+   return dynamic_cast<ASTSymbol*> (_children[0]);
+}
+
+size_t ASTOpNew::argsSize() const
+{
+   return _children.size() - 1;
+}
+
+AST* ASTOpNew::getArg(size_t pos) const
+{
+   assert(pos + 1 < _children.size());
+   return _children[pos + 1];
+}
+
+std::string ASTOpNew::getConstructor() const
+{
+   return left()->getName();
 }

@@ -2,7 +2,8 @@
 # define VM_SYSCALL_H_
 
 # include "const.h"
+# include "dvar.h"
 
-void vm_syscall_exec(t_vm_int syscall);
+dvar* vm_syscall_exec(t_vm_int syscall, dvar* argv, t_vm_int argc);
 
 #endif //!VM_SYSCALL_H_

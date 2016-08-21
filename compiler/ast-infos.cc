@@ -213,6 +213,42 @@ void ASTVisitorInfos::visit(ASTOpLnot*)
    _infos.desc = "op_lnot";
 }
 
+void ASTVisitorInfos::visit(ASTOpBnot*)
+{
+   _infos.type = ASTType::op_bnot;
+   _infos.desc = "op_bnot";
+}
+
+void ASTVisitorInfos::visit(ASTOpLshift*)
+{
+   _infos.type = ASTType::op_lshift;
+   _infos.desc = "op_lshift";
+}
+
+void ASTVisitorInfos::visit(ASTOpRshift*)
+{
+   _infos.type = ASTType::op_rshift;
+   _infos.desc = "op_rshift";
+}
+
+void ASTVisitorInfos::visit(ASTOpBand*)
+{
+   _infos.type = ASTType::op_band;
+   _infos.desc = "op_band";
+}
+
+void ASTVisitorInfos::visit(ASTOpBxor*)
+{
+   _infos.type = ASTType::op_bxor;
+   _infos.desc = "op_bxor";
+}
+
+void ASTVisitorInfos::visit(ASTOpBor*)
+{
+   _infos.type = ASTType::op_bor;
+   _infos.desc = "op_bor";
+}
+
 void ASTVisitorInfos::visit(ASTOpAssign*)
 {
    _infos.type = ASTType::op_assign;
@@ -247,6 +283,60 @@ void ASTVisitorInfos::visit(ASTOpModeq*)
 {
    _infos.type = ASTType::op_modeq;
    _infos.desc = "op_modeq";
+}
+
+void ASTVisitorInfos::visit(ASTOpLshifteq*)
+{
+   _infos.type = ASTType::op_lshifteq;
+   _infos.desc = "op_lshifteq";
+}
+
+void ASTVisitorInfos::visit(ASTOpRshifteq*)
+{
+   _infos.type = ASTType::op_rshifteq;
+   _infos.desc = "op_rshifteq";
+}
+
+void ASTVisitorInfos::visit(ASTOpBandeq*)
+{
+   _infos.type = ASTType::op_bandeq;
+   _infos.desc = "op_bandeq";
+}
+
+void ASTVisitorInfos::visit(ASTOpBxoreq*)
+{
+   _infos.type = ASTType::op_bxoreq;
+   _infos.desc = "op_bxoreq";
+}
+
+void ASTVisitorInfos::visit(ASTOpBoreq*)
+{
+   _infos.type = ASTType::op_boreq;
+   _infos.desc = "op_boreq";
+}
+
+void ASTVisitorInfos::visit(ASTOpTernary*)
+{
+   _infos.type = ASTType::op_ternary;
+   _infos.desc = "op_ternary";
+}
+
+void ASTVisitorInfos::visit(ASTOpSubscript*)
+{
+   _infos.type = ASTType::op_subscript;
+   _infos.desc = "op_subscript";
+}
+
+void ASTVisitorInfos::visit(ASTOpMember*)
+{
+   _infos.type = ASTType::op_member;
+   _infos.desc = "op_member";
+}
+
+void ASTVisitorInfos::visit(ASTOpNew*)
+{
+   _infos.type = ASTType::op_new;
+   _infos.desc = "op_new";
 }
 
 void ASTVisitorInfos::visit(ASTStatementsBlock*)
@@ -288,14 +378,44 @@ void ASTVisitorInfos::visit(ASTStatementWhile*)
    _infos.desc = "statement_while";
 }
 
-void ASTVisitorInfos::visit(ASTFunctionDef*)
+void ASTVisitorInfos::visit(ASTStatementDo*)
 {
-   _infos.type = ASTType::function_def;
-   _infos.desc = "function_def";
+   _infos.type = ASTType::statement_do;
+   _infos.desc = "statement_do";
+}
+
+void ASTVisitorInfos::visit(ASTStatementFor*)
+{
+   _infos.type = ASTType::statement_for;
+   _infos.desc = "statement_for";
+}
+
+void ASTVisitorInfos::visit(ASTStatementBreak*)
+{
+   _infos.type = ASTType::statement_break;
+   _infos.desc = "statement_break";
+}
+
+void ASTVisitorInfos::visit(ASTStatementContinue*)
+{
+   _infos.type = ASTType::statement_continue;
+   _infos.desc = "statement_continue";
 }
 
 void ASTVisitorInfos::visit(ASTModule*)
 {
    _infos.type = ASTType::module;
    _infos.desc = "module";
+}
+
+void ASTVisitorInfos::visit(ASTFunctionDef*)
+{
+   _infos.type = ASTType::function_def;
+   _infos.desc = "function_def";
+}
+
+void ASTVisitorInfos::visit(ASTGlobalDef*)
+{
+   _infos.type = ASTType::global_def;
+   _infos.desc = "global_def";
 }

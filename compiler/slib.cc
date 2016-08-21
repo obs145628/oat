@@ -13,5 +13,7 @@ SLibFunction SLib::getFunction(const std::string& name)
 }
 
 const std::map<std::string, SLibFunction> SLib::_funs = {
-   {"print", {1, VM_SYSCALL_PRINT}}
+   {"exit", {VM_SYSCALL_EXIT}},
+   {"kprint", {VM_SYSCALL_KPRINT}},
+   {"print", {VM_SYSCALL_PRINT}}
 };

@@ -3,6 +3,8 @@
 
 # include "ast.hh"
 
+class ASTSymbol;
+
 class ASTOpUnary : public AST
 {
 public:
@@ -192,6 +194,54 @@ public:
    virtual void accept(ASTVisitor& v) override;
 };
 
+class ASTOpBnot : public ASTOpUnary
+{
+public:
+   ASTOpBnot(Token token, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpLshift : public ASTOpBinary
+{
+public:
+   ASTOpLshift(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpRshift : public ASTOpBinary
+{
+public:
+   ASTOpRshift(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpBand : public ASTOpBinary
+{
+public:
+   ASTOpBand(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpBxor : public ASTOpBinary
+{
+public:
+   ASTOpBxor(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpBor : public ASTOpBinary
+{
+public:
+   ASTOpBor(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
 class ASTOpAssign : public ASTOpBinary
 {
 public:
@@ -239,5 +289,91 @@ public:
 
    virtual void accept(ASTVisitor& v) override;
 };
+
+class ASTOpLshifteq : public ASTOpBinary
+{
+public:
+   ASTOpLshifteq(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpRshifteq : public ASTOpBinary
+{
+public:
+   ASTOpRshifteq(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpBandeq : public ASTOpBinary
+{
+public:
+   ASTOpBandeq(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpBxoreq : public ASTOpBinary
+{
+public:
+   ASTOpBxoreq(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpBoreq : public ASTOpBinary
+{
+public:
+   ASTOpBoreq(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpTernary : public AST
+{
+public:
+   ASTOpTernary(Token token, AST* op1, AST* op2, AST* op3);
+
+   AST* op1() const;
+   AST* op2() const;
+   AST* op3() const;
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpSubscript : public ASTOpBinary
+{
+public:
+   ASTOpSubscript(Token token, AST* op1, AST* op2);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpMember : public AST
+{
+public:
+   ASTOpMember(Token token, AST* op1, ASTSymbol * op2);
+
+   AST* op1() const;
+   ASTSymbol* op2() const;
+   std::string getMember() const;
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTOpNew : public AST
+{
+public:
+   ASTOpNew(Token token, const std::vector<AST*>& children);
+
+   virtual void accept(ASTVisitor& v) override;
+
+   ASTSymbol* left() const;
+   size_t argsSize() const;
+   AST* getArg(size_t pos) const;
+   std::string getConstructor() const;
+};
+
 
 #endif //!AST_OPERATORS_HH_

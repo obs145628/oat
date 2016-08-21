@@ -17,8 +17,9 @@ public:
 
 
    virtual void visit(ASTStatementsBlock* e) override;
-   virtual void visit(ASTFunctionDef* e) override;
+   virtual void visit(ASTStatementFor* e) override;
    virtual void visit(ASTModule* e) override;
+   virtual void visit(ASTFunctionDef* e) override;
 
 private:
    RuntimeScope* _parent;

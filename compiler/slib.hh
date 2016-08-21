@@ -7,7 +7,6 @@
 
 struct SLibFunction
 {
-   std::size_t nbArgs;
    t_vm_int syscall;
 };
 

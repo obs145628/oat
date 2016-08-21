@@ -2,6 +2,7 @@
 # define AST_STATE_HH_
 
 # include <vector>
+# include <string>
 # include "ast-infos.hh"
 # include "../vm/const.h"
 
@@ -29,6 +30,7 @@ public:
    StackFrame* frame() const;
    ASTType type() const;
    ASTState* parent() const;
+   ASTState* root();
 
    std::vector<ASTState*> children() const;
    ASTState* child(std::size_t pos) const;
@@ -37,6 +39,9 @@ public:
 
    t_vm_saddr getVar(std::size_t pos) const;
    void addVar(t_vm_saddr v);
+
+   std::string getLabel(std::size_t pos) const;
+   void addLabel(const std::string& label);
 
    void tokenError(const std::string& message);
 
@@ -47,6 +52,7 @@ private:
    ASTState* _parent;
    ASTInfos _infos;
    std::vector<t_vm_saddr> _vars;
+   std::vector<std::string> _labels;
    std::vector<ASTState*> _children;
 
 };

@@ -1,54 +1,31 @@
-fact(n)
-{
-  if(n <= 1)
-    => 1;
-  else
-    => n * fact(n-1);
-}
-
-fibo(n)
-{
-  a := 0;
-  b := 1;
-
-  while(n > 0)
-  {
-    temp := a;
-    a += b;
-    b = temp;
-    --n;
-  }
-
-  => a;
-}
+let value = abs(-67);
 
 println(x)
 {
-  print(x);
-  print("\n");
+  print(x, "\n");
+}
+
+abs(x) => x > 0 ? x : -x;
+
+t2()
+{
+  value *= 2;
 }
 
 main()
 {
-  n := 10;
+  println("BEGIN");
 
-  i := 0;
-  while(i < n)
+  let n = -1;
+
+  for(let n = 0; n <= 20; ++n)
   {
-    print("Fibo(");
-    print(i);
-    print(") = ");
-    println(fibo(i));
-    ++i;
+    if(n % 2)
+      continue;
+    println(n);
   }
 
-  j := 0;
-  while(j < n)
-  {
-    print("fact(");
-    print(j);
-    print(") = ");
-    println(fact(j));
-    ++j;
-  }
+  println(n);
+
+  println("END");
 }

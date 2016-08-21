@@ -43,12 +43,27 @@ public:
    virtual void visit(ASTOpLand* e);
    virtual void visit(ASTOpLor* e);
    virtual void visit(ASTOpLnot* e);
+   virtual void visit(ASTOpBnot* e);
+   virtual void visit(ASTOpLshift* e);
+   virtual void visit(ASTOpRshift* e);
+   virtual void visit(ASTOpBand* e);
+   virtual void visit(ASTOpBxor* e);
+   virtual void visit(ASTOpBor* e);
    virtual void visit(ASTOpAssign* e);
    virtual void visit(ASTOpPluseq* e);
    virtual void visit(ASTOpMinuseq* e);
    virtual void visit(ASTOpMuleq* e);
    virtual void visit(ASTOpDiveq* e);
    virtual void visit(ASTOpModeq* e);
+   virtual void visit(ASTOpLshifteq* e);
+   virtual void visit(ASTOpRshifteq* e);
+   virtual void visit(ASTOpBandeq* e);
+   virtual void visit(ASTOpBxoreq* e);
+   virtual void visit(ASTOpBoreq* e);
+   virtual void visit(ASTOpTernary* e);
+   virtual void visit(ASTOpSubscript* e);
+   virtual void visit(ASTOpMember* e);
+   virtual void visit(ASTOpNew* e);
 
    virtual void visit(ASTStatementsBlock* e);
    virtual void visit(ASTStatementEmpty* e);
@@ -56,10 +71,14 @@ public:
    virtual void visit(ASTStatementReturn* e);
    virtual void visit(ASTStatementIf* e);
    virtual void visit(ASTStatementWhile* e);
-
-   virtual void visit(ASTFunctionDef* e);
+   virtual void visit(ASTStatementDo* e);
+   virtual void visit(ASTStatementFor* e);
+   virtual void visit(ASTStatementBreak* e);
+   virtual void visit(ASTStatementContinue* e);
 
    virtual void visit(ASTModule* e);
+   virtual void visit(ASTFunctionDef* e);
+   virtual void visit(ASTGlobalDef* e);
 
 private:
 

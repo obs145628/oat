@@ -1,0 +1,47 @@
+fact(n)
+{
+  if(n <= 1)
+    => 1;
+  else
+    => n * fact(n-1);
+}
+
+fibo(n)
+{
+  let a = 0;
+  let b = 1;
+
+  while(n > 0)
+  {
+    let temp = a;
+    a += b;
+    b = temp;
+    --n;
+  }
+
+  => a;
+}
+
+println(x)
+{
+  print(x, "\n");
+}
+
+main()
+{
+  let n = 10;
+
+  let i = 0;
+  while(i < n)
+  {
+    print("Fibo(", i, ") = ", fibo(i), "\n");
+    ++i;
+  }
+
+  let j = 0;
+  while(j < n)
+  {
+    print("fact(", j, ") = ", fact(j), "\n");
+    ++j;
+  }
+}

@@ -36,20 +36,40 @@ enum class ASTType
       op_land,
       op_lor,
       op_lnot,
+      op_bnot,
+      op_lshift,
+      op_rshift,
+      op_band,
+      op_bxor,
+      op_bor,
       op_assign,
       op_pluseq,
       op_minuseq,
       op_muleq,
       op_diveq,
       op_modeq,
+      op_lshifteq,
+      op_rshifteq,
+      op_bandeq,
+      op_bxoreq,
+      op_boreq,
+      op_ternary,
+      op_subscript,
+      op_member,
+      op_new,
       statements_block,
       statement_empty,
       statement_define,
       statement_return,
       statement_if,
       statement_while,
+      statement_do,
+      statement_for,
+      statement_break,
+      statement_continue,
+      module,
       function_def,
-      module
+      global_def
 };
 
 struct ASTInfos
@@ -102,12 +122,27 @@ public:
    virtual void visit(ASTOpLand* e) override;
    virtual void visit(ASTOpLor* e) override;
    virtual void visit(ASTOpLnot* e) override;
+   virtual void visit(ASTOpBnot* e) override;
+   virtual void visit(ASTOpLshift* e) override;
+   virtual void visit(ASTOpRshift* e) override;
+   virtual void visit(ASTOpBand* e) override;
+   virtual void visit(ASTOpBxor* e) override;
+   virtual void visit(ASTOpBor* e) override;
    virtual void visit(ASTOpAssign* e) override;
    virtual void visit(ASTOpPluseq* e) override;
    virtual void visit(ASTOpMinuseq* e) override;
    virtual void visit(ASTOpMuleq* e) override;
    virtual void visit(ASTOpDiveq* e) override;
    virtual void visit(ASTOpModeq* e) override;
+   virtual void visit(ASTOpLshifteq* e) override;
+   virtual void visit(ASTOpRshifteq* e) override;
+   virtual void visit(ASTOpBandeq* e) override;
+   virtual void visit(ASTOpBxoreq* e) override;
+   virtual void visit(ASTOpBoreq* e) override;
+   virtual void visit(ASTOpTernary* e) override;
+   virtual void visit(ASTOpSubscript* e) override;
+   virtual void visit(ASTOpMember* e) override;
+   virtual void visit(ASTOpNew* e) override;
 
    virtual void visit(ASTStatementsBlock* e) override;
    virtual void visit(ASTStatementEmpty* e) override;
@@ -115,10 +150,14 @@ public:
    virtual void visit(ASTStatementReturn* e) override;
    virtual void visit(ASTStatementIf* e) override;
    virtual void visit(ASTStatementWhile* e) override;
-
-   virtual void visit(ASTFunctionDef* e) override;
+   virtual void visit(ASTStatementDo* e) override;
+   virtual void visit(ASTStatementFor* e) override;
+   virtual void visit(ASTStatementBreak* e) override;
+   virtual void visit(ASTStatementContinue* e) override;
 
    virtual void visit(ASTModule* e) override;
+   virtual void visit(ASTFunctionDef* e) override;
+   virtual void visit(ASTGlobalDef* e) override;
 
 private:
    ASTInfos _infos;

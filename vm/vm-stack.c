@@ -13,7 +13,7 @@ void vm_stack_init()
 {
    assert(!stack_sp_);
    for(size_t i = 0; i < STACK_SIZE; ++i)
-      dvar_init(stack_ + STACK_SIZE);
+      dvar_init(stack_ + i);
    stack_sp_ = stack_;
    stack_fsp_ = stack_frames;
 }

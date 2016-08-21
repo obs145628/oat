@@ -24,12 +24,18 @@ public:
 class ASTStatementDefine : public AST
 {
 public:
-   ASTStatementDefine(Token t, ASTSymbol* symbol, AST* value);
+   ASTStatementDefine(Token t, ASTSymbol* symbol, AST* value, bool isConst);
+   ASTStatementDefine(Token t, ASTSymbol* symbol);
 
    virtual void accept(ASTVisitor& v) override;
 
    ASTSymbol* getSymbol() const;
    AST* getValue() const;
+   bool hasValue() const;
+   bool isConst() const;
+
+private:
+   bool _const;
 };
 
 class ASTStatementReturn : public AST
@@ -67,6 +73,48 @@ public:
 
    AST* getCondition() const;
    ASTStatementsBlock* getWhileStatement() const;
+};
+
+class ASTStatementDo : public AST
+{
+public:
+   ASTStatementDo(Token t, AST* condition,
+                  ASTStatementsBlock* doStatement);
+
+   virtual void accept(ASTVisitor& v) override;
+
+   AST* getCondition() const;
+   ASTStatementsBlock* getDoStatement() const;
+};
+
+class ASTStatementFor : public AST
+{
+public:
+   ASTStatementFor(Token t, AST* init, AST* condition, AST* inc,
+                  ASTStatementsBlock* forStatement);
+
+   virtual void accept(ASTVisitor& v) override;
+
+   AST* getInit() const;
+   AST* getCondition() const;
+   AST* getInc() const;
+   ASTStatementsBlock* getForStatement() const;
+};
+
+class ASTStatementBreak : public AST
+{
+public:
+   ASTStatementBreak(Token t);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTStatementContinue : public AST
+{
+public:
+   ASTStatementContinue(Token t);
+
+   virtual void accept(ASTVisitor& v) override;
 };
 
 #endif //!AST_STATEMENTS_HH_

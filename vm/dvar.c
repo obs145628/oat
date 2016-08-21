@@ -1,2036 +1,2473 @@
 #include "dvar.h"
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+#include "dvar-fun.h"
+#include "dvar-str.h"
 #include "str.h"
 #include "numbers.h"
 #include "err.h"
 
-static const char* DVAR_STYPES[] = {
-   "null",
-   "int",
-   "double",
-   "char",
-   "bool",
-   "string"
-};
 
-static const f_dvar_cast CAST_FNS[] = {
-   NULL,
-   dvar_cast_null_to_int,
-   dvar_cast_null_to_double,
-   dvar_cast_null_to_char,
-   dvar_cast_null_to_bool,
-   dvar_cast_null_to_string,
-
-   dvar_assign_null,
-   NULL,
-   dvar_cast_int_to_double,
-   dvar_cast_int_to_char,
-   dvar_cast_int_to_bool,
-   dvar_cast_int_to_string,
-
-   dvar_assign_null,
-   dvar_cast_double_to_int,
-   NULL,
-   dvar_cast_double_to_char,
-   dvar_cast_double_to_bool,
-   dvar_cast_double_to_string,
-
-   dvar_assign_null,
-   dvar_cast_char_to_int,
-   dvar_cast_char_to_double,
-   NULL,
-   dvar_cast_char_to_bool,
-   dvar_cast_char_to_string,
+static void resolve_ref_(const dvar** v)
+{
+   if((*v)->type == DVAR_TREF)
+      *v = (*v)->v_ref;
+}
 
 
-   dvar_assign_null,
-   dvar_cast_bool_to_int,
-   dvar_cast_bool_to_double,
-   dvar_cast_bool_to_char,
-   NULL,
-   dvar_cast_bool_to_string,
 
-   dvar_assign_null,
-   dvar_cast_string_to_int,
-   dvar_cast_string_to_double,
-   dvar_cast_string_to_char,
-   dvar_cast_string_to_bool,
-   NULL
-};
+static const char* type_to_cstr_(t_vm_type t)
+{
+   static const char* TYPES[] = {
+      "null",
+      "int",
+      "double",
+      "char",
+      "bool",
+      "string",
+      "function",
+   };
+   assert(t >= 0 && t < DVAR_NB_TYPES);
+   return TYPES[t];
+}
 
-static const int CAST_IMPLICIT_TAB[] = {
-   0,
-   0,
-   0,
-   0,
-   1,
-   0,
+static void reset_content_(dvar *v)
+{
+   v->type = DVAR_TNULL;
+}
 
-   0,
-   0,
-   1,
-   1,
-   1,
-   0,
+static void reset_mode_(dvar* v)
+{
+   v->mode = DVAR_MVAR;
+}
 
-   0,
-   1,
-   0,
-   1,
-   1,
-   0,
+static void free_str_(dvar* v)
+{
+   dvar_str_free(v->v_str);
+}
 
-   0,
-   1,
-   1,
-   0,
-   1,
-   0,
+static void free_fun_(dvar* v)
+{
+   dvar_fun_free(v->v_fun);
+}
 
-   0,
-   1,
-   1,
-   1,
-   0,
-   0,
+static void free_content_(dvar *v)
+{
+   static const f_dvar_a1 FNS[] = {
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      free_str_,
+      free_fun_
+   };
 
-   0,
-   0,
-   0,
-   0,
-   1,
-   0,
-};
+   if(FNS[v->type])
+      FNS[v->type](v);
 
-static const char CAST_HIERARCHY[] = {
+   reset_content_(v);
+}
+
+static void reset_(dvar* v)
+{
+   reset_content_(v);
+   reset_mode_(v);
+}
+
+typedef t_vm_bool (*f_to_bool_)(const dvar* v);
+
+static t_vm_bool to_bool_null_(const dvar* v)
+{
+   (void) v;
+   return FALSE;
+}
+
+static t_vm_bool to_bool_int_(const dvar* v)
+{
+   return (t_vm_bool) (!!v->v_int);
+}
+
+static t_vm_bool to_bool_double_(const dvar* v)
+{
+   return (t_vm_bool) (!!v->v_double);
+}
+
+static t_vm_bool to_bool_char_(const dvar* v)
+{
+   return (t_vm_bool) (!!v->v_char);
+}
+
+static t_vm_bool to_bool_bool_(const dvar* v)
+{
+   return v->v_bool;
+}
+
+static t_vm_bool to_bool_str_(const dvar* v)
+{
+   return dvar_str_to_bool_(v->v_str);
+}
+
+static t_vm_bool to_bool_fun_(const dvar* v)
+{
+   return dvar_fun_to_bool_(v->v_fun);
+}
+
+static t_vm_bool to_bool_(const dvar* v)
+{
+   static const f_to_bool_ FNS[] = {
+      to_bool_null_,
+      to_bool_int_,
+      to_bool_double_,
+      to_bool_char_,
+      to_bool_bool_,
+      to_bool_str_,
+      to_bool_fun_
+   };
+   return FNS[v->type](v);
+}
+
+typedef char* (*f_to_str_)(const dvar* v);
+
+static char* to_str_null_(const dvar* v)
+{
+   (void) v;
+   return strClone("null");
+}
+
+static char* to_str_int_(const dvar* v)
+{
+   return intToStr((long) v->v_int);
+}
+
+static char* to_str_double_(const dvar* v)
+{
+   return floatToStr((double) v->v_double);
+}
+
+static char* to_str_char_(const dvar* v)
+{
+   char* str = malloc(2);
+   str[0] = (char) v->v_char;
+   str[1] = '\0';
+   return str;
+}
+
+static char* to_str_bool_(const dvar* v)
+{
+   return strClone(v->v_bool ? "true" : "false");
+}
+
+static char* to_str_str_(const dvar* v)
+{
+   return dvar_str_to_string_(v->v_str);
+}
+
+static char* to_str_fun_(const dvar* v)
+{
+   return dvar_fun_to_string_(v->v_fun);
+}
+
+static char* to_str_(const dvar* v)
+{
+   static const f_to_str_ FNS[] = {
+      to_str_null_,
+      to_str_int_,
+      to_str_double_,
+      to_str_char_,
+      to_str_bool_,
+      to_str_str_,
+      to_str_fun_
+   };
+   return FNS[v->type](v);
+}
+
+
+
+static void set_null_(dvar* v)
+{
+   v->type = DVAR_TNULL;
+}
+
+static void set_int_(dvar* v, t_vm_int x)
+{
+   v->type = DVAR_TINT;
+   v->v_int = x;
+}
+
+static void set_double_(dvar* v, t_vm_double x)
+{
+   v->type = DVAR_TDOUBLE;
+   v->v_double = x;
+}
+
+static void set_char_(dvar* v, t_vm_char x)
+{
+   v->type = DVAR_TCHAR;
+   v->v_char = x;
+}
+
+static void set_bool_(dvar* v, t_vm_bool x)
+{
+   assert(x == FALSE || x == TRUE);
+   v->type = DVAR_TBOOL;
+   v->v_bool = x;
+}
+
+static void set_str_(dvar* v, const dvar_str* str)
+{
+   v->type = DVAR_TSTR;
+   v->v_str = dvar_str_copy(str);
+}
+
+static void set_str_c_(dvar* v, const char* x, t_vm_int len)
+{
+   v->type = DVAR_TSTR;
+   v->v_str = dvar_str_new(x, len);
+}
+
+static void set_fun_(dvar* v, const dvar_fun* fun)
+{
+   v->type = DVAR_TFUN;
+   v->v_fun = dvar_fun_copy(fun);
+}
+
+static void set_function_(dvar* v, t_vm_addr addr)
+{
+   v->type = DVAR_TFUN;
+   v->v_fun = dvar_fun_new_function(addr);
+}
+
+static void set_syscall_(dvar* v, t_vm_int syscall)
+{
+   v->type = DVAR_TFUN;
+   v->v_fun = dvar_fun_new_syscall(syscall);
+}
+
+static void assign_null_(dvar* v)
+{
+   free_content_(v);
+   set_null_(v);
+}
+
+static void assign_int_(dvar* v, t_vm_int x)
+{
+   free_content_(v);
+   set_int_(v, x);
+}
+
+static void assign_double_(dvar* v, t_vm_double x)
+{
+   free_content_(v);
+   set_double_(v, x);
+}
+
+static void assign_char_(dvar* v, t_vm_char x)
+{
+   free_content_(v);
+   set_char_(v, x);
+}
+
+static void assign_bool_(dvar* v, t_vm_bool x)
+{
+   free_content_(v);
+   set_bool_(v, x);
+}
+
+static void assign_str_(dvar* v, const dvar_str* str)
+{
+   free_content_(v);
+   set_str_(v, str);
+}
+
+static void assign_fun_(dvar* v, const dvar_fun* fun)
+{
+   free_content_(v);
+   set_fun_(v, fun);
+}
+
+static void copy_null_(const dvar* v, dvar* dst)
+{
+   (void) v;
+   assign_null_(dst);
+}
+
+static void copy_int_(const dvar* v, dvar* dst)
+{
+   assign_int_(dst, v->v_int);
+}
+
+static void copy_double_(const dvar* v, dvar* dst)
+{
+   assign_double_(dst, v->v_double);
+}
+
+static void copy_char_(const dvar* v, dvar* dst)
+{
+   assign_char_(dst, v->v_char);
+}
+
+static void copy_bool_(const dvar* v, dvar* dst)
+{
+   assign_bool_(dst, v->v_bool);
+}
+
+static void copy_str_(const dvar* v, dvar* dst)
+{
+   assign_str_(dst, v->v_str);
+}
+
+static void copy_fun_(const dvar* v, dvar* dst)
+{
+   assign_fun_(dst, v->v_fun);
+}
+
+static void move_null_(dvar* v, dvar* dst)
+{
+   assign_null_(dst);
+   reset_(v);
+}
+
+static void move_int_(dvar* v, dvar* dst)
+{
+   assign_int_(dst, v->v_int);
+   reset_(v);
+}
+
+static void move_double_(dvar* v, dvar* dst)
+{
+   assign_double_(dst, v->v_double);
+   reset_(v);
+}
+
+static void move_char_(dvar* v, dvar* dst)
+{
+   assign_char_(dst, v->v_char);
+   reset_(v);
+}
+
+static void move_bool_(dvar* v, dvar* dst)
+{
+   assign_bool_(dst, v->v_bool);
+   reset_(v);
+}
+
+static void move_str_(dvar* v, dvar* dst)
+{
+   free_content_(dst);
+   dst->type = DVAR_TSTR;
+   dst->v_str = dvar_str_move(v->v_str);
+   reset_(v);
+}
+
+static void move_fun_(dvar* v, dvar* dst)
+{
+   free_content_(dst);
+   dst->type = DVAR_TFUN;
+   dst->v_fun = dvar_fun_move(v->v_fun);
+   reset_(v);
+}
+
+
+static void cast_null_to_int_(dvar* v)
+{
+   free_content_(v);
+   set_int_(v, 0);
+}
+
+static void cast_null_to_double_(dvar* v)
+{
+   free_content_(v);
+   set_double_(v, 0);
+}
+
+static void cast_null_to_char_(dvar* v)
+{
+   free_content_(v);
+   set_char_(v, 0);
+}
+
+static void cast_null_to_bool_(dvar* v)
+{
+   free_content_(v);
+   set_bool_(v, 0);
+}
+
+static void cast_null_to_str_(dvar* v)
+{
+   free_content_(v);
+   set_str_c_(v, "null", 4);
+}
+
+static void cast_int_to_double_(dvar* v)
+{
+   t_vm_double x = (t_vm_double) (v->v_int);
+   free_content_(v);
+   set_double_(v, x);
+}
+
+static void cast_int_to_char_(dvar* v)
+{
+   t_vm_char x = (t_vm_char) (v->v_int);
+   free_content_(v);
+   set_char_(v, x);
+}
+
+static void cast_int_to_bool_(dvar* v)
+{
+   t_vm_bool x = (t_vm_bool) (!!v->v_int);
+   free_content_(v);
+   set_bool_(v, x);
+}
+
+static void cast_int_to_str_(dvar* v)
+{
+   char* x = intToStr((long) (v->v_int));
+   free_content_(v);
+   set_str_c_(v, x, (t_vm_int) strlen(x));
+   free(x);
+}
+
+static void cast_double_to_int_(dvar* v)
+{
+   t_vm_int x = (t_vm_int) (v->v_double);
+   free_content_(v);
+   set_int_(v, x);
+}
+
+static void cast_double_to_char_(dvar* v)
+{
+   t_vm_char x = (t_vm_char) (v->v_double);
+   free_content_(v);
+   set_char_(v, x);
+}
+
+static void cast_double_to_bool_(dvar* v)
+{
+   t_vm_bool x = (t_vm_bool) (!!v->v_double);
+   free_content_(v);
+   set_bool_(v, x);
+}
+
+static void cast_double_to_str_(dvar* v)
+{
+   char* x = floatToStr((double) (v->v_double));
+   free_content_(v);
+   set_str_c_(v, x, (t_vm_int) strlen(x));
+   free(x);
+}
+
+static void cast_char_to_int_(dvar* v)
+{
+   t_vm_int x = (t_vm_int) (v->v_char);
+   free_content_(v);
+   set_int_(v, x);
+}
+
+static void cast_char_to_double_(dvar* v)
+{
+   t_vm_double x = (t_vm_double) (v->v_char);
+   free_content_(v);
+   set_double_(v, x);
+}
+
+static void cast_char_to_bool_(dvar* v)
+{
+   t_vm_bool x = (t_vm_bool) (!!v->v_char);
+   free_content_(v);
+   set_bool_(v, x);
+}
+
+static void cast_char_to_str_(dvar* v)
+{
+   char x = (char) (v->v_char);
+   free_content_(v);
+   set_str_c_(v, &x, 1);
+}
+
+static void cast_bool_to_int_(dvar* v)
+{
+   t_vm_int x = (t_vm_int) (v->v_bool);
+   free_content_(v);
+   set_int_(v, x);
+}
+
+static void cast_bool_to_double_(dvar* v)
+{
+   t_vm_double x = (t_vm_double) (v->v_bool);
+   free_content_(v);
+   set_double_(v, x);
+}
+
+static void cast_bool_to_char_(dvar* v)
+{
+   t_vm_char x = (t_vm_char) (v->v_char);
+   free_content_(v);
+   set_char_(v, x);
+}
+
+static void cast_bool_to_str_(dvar* v)
+{
+   t_vm_bool x = v->v_bool;
+   free_content_(v);
+   if(x)
+      set_str_c_(v, "true", 4);
+   else
+      set_str_c_(v, "false", 5);
+}
+
+static void cast_str_to_int_(dvar* v)
+{
+   char* str = to_str_(v);
+   int ok;
+   t_vm_int x = (t_vm_int) (strToInt(str, &ok));
+   if(!ok)
+      err("Unable to cast str to int, str = '%s'", str);
+   free(str);
+
+   free_content_(v);
+   set_int_(v, x);
+}
+
+static void cast_str_to_double_(dvar* v)
+{
+   char* str = to_str_(v);
+   int ok;
+   t_vm_double x = (t_vm_double) (strToFloat(str, &ok));
+   if(!ok)
+      err("Unable to cast str to double, str = '%s'", str);
+   free(str);
+
+   free_content_(v);
+   set_double_(v, x);
+}
+
+static void cast_str_to_char_(dvar* v)
+{
+   dvar_str* str = v->v_str;
+   if(str->len != 1)
+      err("Unable to cast str to char, str = '%s'", to_str_(v));
+   t_vm_char x = (str->chars[0].v_char);
+   free_content_(v);
+   set_char_(v, x);
+}
+
+static void cast_str_to_bool_(dvar* v)
+{
+   t_vm_bool x = (t_vm_bool) (!!(v->v_str->len));
+   free_content_(v);
+   set_bool_(v, x);
+}
+
+static void cast_fun_to_bool_(dvar* v)
+{
+   assign_bool_(v, dvar_fun_to_bool_(v->v_fun));
+}
+
+static void cast_fun_to_str_(dvar* v)
+{
+   char* x = dvar_fun_to_string_(v->v_fun);
+   free_content_(v);
+   set_str_c_(v, x, (t_vm_int) strlen(x));
+   free(x);
+}
+
+
+
+static void cast_to_(dvar* v, t_vm_type type)
+{
+   static const f_dvar_a1 FNS[] = {
+      NULL,
+      cast_null_to_int_,
+      cast_null_to_double_,
+      cast_null_to_char_,
+      cast_null_to_bool_,
+      cast_null_to_str_,
+      NULL,
+
+      NULL,
+      NULL,
+      cast_int_to_double_,
+      cast_int_to_char_,
+      cast_int_to_bool_,
+      cast_int_to_str_,
+      NULL,
+
+      NULL,
+      cast_double_to_int_,
+      NULL,
+      cast_double_to_char_,
+      cast_double_to_bool_,
+      cast_double_to_str_,
+      NULL,
+
+      NULL,
+      cast_char_to_int_,
+      cast_char_to_double_,
+      NULL,
+      cast_char_to_bool_,
+      cast_char_to_str_,
+      NULL,
+
+      NULL,
+      cast_bool_to_int_,
+      cast_bool_to_double_,
+      cast_bool_to_char_,
+      NULL,
+      cast_bool_to_str_,
+      NULL,
+
+      NULL,
+      cast_str_to_int_,
+      cast_str_to_double_,
+      cast_str_to_char_,
+      cast_str_to_bool_,
+      NULL,
+      NULL,
+
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      cast_fun_to_bool_,
+      cast_fun_to_str_,
+      NULL
+   };
+
+   assert(type >= 0 && type < DVAR_NB_TYPES);
+   if(v->type == type)
+      return;
+
+   size_t pos = (size_t) (v->type) * DVAR_NB_TYPES + (size_t) type;
+   assert(FNS[pos]);
+   FNS[pos](v);
+}
+
+static t_vm_bool has_implicit_cast_(t_vm_type from, t_vm_type to)
+{
+   static const t_vm_bool  TAB[] = {
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+
+      0,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+
+      0,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+   };
+
+
+   assert(from >= 0 && from < DVAR_NB_TYPES);
+   assert(to >= 0 && to < DVAR_NB_TYPES);
+
+   return TAB[(size_t) from * DVAR_NB_TYPES + (size_t) to];
+}
+
+static const char CAST_HIERARCHY_[] = {
    DVAR_TNULL,
    DVAR_TBOOL,
    DVAR_TCHAR,
    DVAR_TINT,
    DVAR_TDOUBLE,
-   DVAR_TSTRING
+   DVAR_TSTR,
+   DVAR_TFUN
 };
 
-static const int CAST_HIERARCHY_LEVEL[] = {
+static const int CAST_HIERARCHY_LEVEL_[] = {
    0,
    3,
    4,
    2,
    1,
-   5
+   5,
+   6
 };
 
-static void dvar_perform_cast_(dvar* v, char type)
-{
-   CAST_FNS[(size_t)(v->type) * DVAR_NB_TYPES + (size_t)(type)](v);
-}
+typedef const void** a_typed_fns;
 
-static char dvar_find_type_(const dvar* v, a_dvar_typed_fns table)
+static t_vm_type find_type_(const dvar* v, a_typed_fns table)
 {
    for(int i = DVAR_NB_TYPES - 1; i >= 0; --i)
    {
-      char type = CAST_HIERARCHY[i];
-      if(table[(size_t) type] && dvar_has_implicit_cast(v->type, type))
+      t_vm_type type = CAST_HIERARCHY_[i];
+      if(table[(size_t) type] && has_implicit_cast_(v->type, type))
          return type;
    }
 
    return DVAR_TNOT;
 }
 
-static char dvar_find_type_2_(const dvar* a, const dvar* b,
-                              a_dvar_typed_fns table)
+static t_vm_type find_type_2_(const dvar* a, const dvar* b,
+                              a_typed_fns table)
 {
    if(table[(size_t) a->type] && !table[(size_t) b->type])
    {
-      if(dvar_has_implicit_cast(b->type, a->type))
+      if(has_implicit_cast_(b->type, a->type))
          return a->type;
    }
 
    if(!table[(size_t) a->type] && table[(size_t) b->type])
    {
-      if(dvar_has_implicit_cast(a->type, b->type))
+      if(has_implicit_cast_(a->type, b->type))
          return b->type;
    }
 
 
    if(table[(size_t) a->type] && table[(size_t) b->type])
    {
-      int la = CAST_HIERARCHY_LEVEL[(size_t) a->type];
-      int lb = CAST_HIERARCHY_LEVEL[(size_t) b->type];
-      if(la > lb && dvar_has_implicit_cast(b->type, a->type))
+      int la = CAST_HIERARCHY_LEVEL_[(size_t) a->type];
+      int lb = CAST_HIERARCHY_LEVEL_[(size_t) b->type];
+      if(la > lb && has_implicit_cast_(b->type, a->type))
          return a->type;
-      else if(dvar_has_implicit_cast(a->type, b->type))
+      else if(has_implicit_cast_(a->type, b->type))
          return b->type;
    }
 
    for(int i = DVAR_NB_TYPES - 1; i >= 0; --i)
    {
-      char type = CAST_HIERARCHY[i];
+      t_vm_type type = CAST_HIERARCHY_[i];
       if(table[(size_t) type]
-         && (type == a->type || dvar_has_implicit_cast(a->type, type))
-         && (type == b->type || dvar_has_implicit_cast(b->type, type)))
+         && (type == a->type || has_implicit_cast_(a->type, type))
+         && (type == b->type || has_implicit_cast_(b->type, type)))
          return type;
    }
 
    return DVAR_TNOT;
 }
 
+typedef void (*f_copy_)(const dvar* v, dvar* dst);
+static void copy_(const dvar* v, dvar* dst)
+{
+   static const f_copy_ FNS[] = {
+      copy_null_,
+      copy_int_,
+      copy_double_,
+      copy_char_,
+      copy_bool_,
+      copy_str_,
+      copy_fun_
+   };
+
+   FNS[v->type](v, dst);
+}
+
+typedef void (*f_move_)(dvar* v, dvar* dst);
+static void move_(dvar* v, dvar* dst)
+{
+   static const f_move_ FNS[] = {
+      move_null_,
+      move_int_,
+      move_double_,
+      move_char_,
+      move_bool_,
+      move_str_,
+      move_fun_
+   };
+
+   FNS[v->type](v, dst);
+}
+
 void dvar_init(dvar* v)
 {
-   v->type = DVAR_TNULL;
+   reset_mode_(v);
+   reset_content_(v);
 }
 
-void dvar_erase(dvar* v)
+void dvar_init_null(dvar* v, t_vm_mode mode)
 {
-   if(v->type == DVAR_TSTRING)
-      free(v->v_string);
-   v->type = DVAR_TNULL;
+   dvar_init(v);
+   v->mode = mode;
+   set_null_(v);
 }
 
-void dvar_assign_null(dvar* v)
+void dvar_init_int(dvar* v, t_vm_mode mode, t_vm_int x)
 {
-   dvar_erase(v);
+   dvar_init(v);
+   v->mode = mode;
+   set_int_(v, x);
 }
 
-void dvar_assign_int(dvar* v, oat_int x)
+void dvar_init_double(dvar* v, t_vm_mode mode, t_vm_double x)
 {
-   dvar_erase(v);
-   v->type = DVAR_TINT;
-   v->v_int = x;
+   dvar_init(v);
+   v->mode = mode;
+   set_double_(v, x);
 }
 
-void dvar_assign_double(dvar* v, oat_double x)
+void dvar_init_char(dvar* v, t_vm_mode mode, t_vm_char x)
 {
-   dvar_erase(v);
-   v->type = DVAR_TDOUBLE;
-   v->v_double = x;
+   dvar_init(v);
+   v->mode = mode;
+   set_char_(v, x);
 }
 
-void dvar_assign_char(dvar* v, char x)
+void dvar_init_bool(dvar* v, t_vm_mode mode, t_vm_bool x)
 {
-   dvar_erase(v);
-   v->type = DVAR_TCHAR;
-   v->v_char = x;
+   dvar_init(v);
+   v->mode = mode;
+   set_bool_(v, x);
 }
 
-void dvar_assign_bool(dvar* v, oat_bool x)
+void dvar_init_str(dvar* v, t_vm_mode mode, const char* x, t_vm_int len)
 {
-   dvar_erase(v);
-   v->type = DVAR_TBOOL;
-   v->v_bool = x;
+   dvar_init(v);
+   v->mode = mode;
+   set_str_c_(v, x, len);
 }
 
-void dvar_assign_string(dvar* v, const char* x, size_t len)
+void dvar_init_function(dvar* v, t_vm_mode mode, t_vm_addr addr)
 {
-   dvar_erase(v);
-   v->type = DVAR_TSTRING;
-   v->v_string = malloc(len + 1);
-   memcpy(v->v_string, x, len);
-   v->v_string[len] = '\0';
+   dvar_init(v);
+   v->mode = mode;
+   set_function_(v, addr);
 }
 
-void dvar_assign_string_move(dvar* v, char* x)
+void dvar_init_syscall(dvar* v, t_vm_mode mode, t_vm_int syscall)
 {
-   dvar_erase(v);
-   v->type = DVAR_TSTRING;
-   v->v_string = x;
-}
-
-void dvar_assign_var(dvar* v, const dvar* x)
-{
-   dvar_erase(v);
-   memcpy(v, x, sizeof(dvar));
-   if(x->type == DVAR_TSTRING)
-      v->v_string = strClone(x->v_string);
-}
-
-oat_bool dvar_to_bool_null(const dvar* v)
-{
-   (void) (v);
-   return FALSE;
-}
-
-oat_bool dvar_to_bool_int(const dvar* v)
-{
-   return (oat_bool) (!!v->v_int);
-}
-
-oat_bool dvar_to_bool_double(const dvar* v)
-{
-   return (oat_bool) (!!v->v_double);
-}
-
-oat_bool dvar_to_bool_char(const dvar* v)
-{
-   return (oat_bool) (!!v->v_char);
-}
-
-oat_bool dvar_to_bool_bool(const dvar* v)
-{
-   return v->v_bool;
-}
-
-oat_bool dvar_to_bool_string(const dvar* v)
-{
-   return (oat_bool) (v->v_string[0] != '\0');
-}
-
-oat_bool dvar_to_bool(const dvar* v)
-{
-   static const f_dvar_to_bool FNS[] = {
-      dvar_to_bool_null,
-      dvar_to_bool_int,
-      dvar_to_bool_double,
-      dvar_to_bool_char,
-      dvar_to_bool_bool,
-      dvar_to_bool_string,
-   };
-
-   return FNS[(size_t) v->type](v);
-}
-
-char* dvar_to_string_null(const dvar* v)
-{
-   (void)v;
-   return strClone("null");
-}
-
-char* dvar_to_string_int(const dvar* v)
-{
-   return intToStr((long) v->v_int);
-}
-
-char* dvar_to_string_double(const dvar* v)
-{
-   return floatToStr((double) v->v_double);
-}
-
-char* dvar_to_string_char(const dvar* v)
-{
-   char* str = malloc(2);
-   str[0] = v->v_char;
-   str[1] = '\0';
-   return str;
-}
-
-char* dvar_to_string_bool(const dvar* v)
-{
-   return v->v_bool ? strClone("true") : strClone("false");
-}
-
-char* dvar_to_string_string(const dvar* v)
-{
-   return strClone(v->v_string);
-}
-
-char* dvar_to_string(const dvar* v)
-{
-   static const f_dvar_to_string FNS[] = {
-      dvar_to_string_null,
-      dvar_to_string_int,
-      dvar_to_string_double,
-      dvar_to_string_char,
-      dvar_to_string_bool,
-      dvar_to_string_string,
-   };
-
-   return FNS[(size_t) v->type](v);
+   dvar_init(v);
+   v->mode = mode;
+   set_syscall_(v, syscall);
 }
 
 
-
-const char* dvar_to_type_string(const dvar* v)
+void dvar_clear(dvar* v)
 {
-   return DVAR_STYPES[(size_t) v->type];
-}
-
-const char* dvar_type_to_string(char type)
-{
-   return DVAR_STYPES[(size_t) type];
-}
-
-
-
-
-void dvar_cast_to(dvar* v, char type)
-{
-   if(v->type != type)
-      CAST_FNS[v->type * DVAR_NB_TYPES + type](v);
-}
-
-void dvar_cast_implicit_to(dvar* v, char type)
-{
-      if(v->type != type)
-      {
-         if(dvar_has_implicit_cast(v->type, type))
-            dvar_perform_cast_(v, type);
-         else
-            err("Unable to realize an implicit cast from %s to %s",
-                DVAR_STYPES[(size_t) v->type], DVAR_STYPES[(size_t) type]);
-      }
-}
-
-int dvar_has_implicit_cast(char from, char to)
-{
-   return CAST_IMPLICIT_TAB[(size_t)(from) * DVAR_NB_TYPES + (size_t)(to)];
-}
-
-
-void dvar_cast_null_to_int(dvar* v)
-{
-   dvar_assign_int(v, 0);
-}
-
-void dvar_cast_null_to_double(dvar* v)
-{
-   dvar_assign_double(v, 0);
-}
-
-void dvar_cast_null_to_char(dvar* v)
-{
-   dvar_assign_char(v, 0);
-}
-
-void dvar_cast_null_to_bool(dvar* v)
-{
-   dvar_assign_bool(v, FALSE);
-}
-
-void dvar_cast_null_to_string(dvar* v)
-{
-   dvar_assign_string(v, "null", 4);
-}
-
-void dvar_cast_int_to_double(dvar* v)
-{
-   dvar_assign_double(v, (oat_double) v->v_int);
-}
-
-void dvar_cast_int_to_char(dvar* v)
-{
-   dvar_assign_char(v, (char) v->v_int);
-}
-
-void dvar_cast_int_to_bool(dvar* v)
-{
-   if(v->v_int)
-      dvar_assign_bool(v, TRUE);
+   if(v->type != DVAR_TREF)
+      free_content_(v);
    else
-      dvar_assign_bool(v, FALSE);
+      reset_content_(v);
+   reset_mode_(v);
 }
 
-void dvar_cast_int_to_string(dvar* v)
+void dvar_bclear(dvar* begin, dvar* end)
 {
-   char* str = intToStr((long) v->v_int);
-   dvar_assign_string_move(v, str);
+   while(begin != end)
+      dvar_clear(begin++);
 }
 
-void dvar_cast_double_to_int(dvar* v)
+t_vm_bool dvar_to_bool(const dvar* v)
 {
-   dvar_assign_int(v, (oat_int) v->v_double);
+   resolve_ref_(&v);
+   return to_bool_(v);
 }
 
-void dvar_cast_double_to_char(dvar* v)
+char* dvar_to_str(const dvar* v)
 {
-   dvar_assign_char(v, (char) v->v_double);
+   resolve_ref_(&v);
+   return to_str_(v);
 }
 
-void dvar_cast_double_to_bool(dvar* v)
-{
-   if(v->v_double)
-      dvar_assign_bool(v, TRUE);
-   else
-      dvar_assign_bool(v, FALSE);
-}
-
-void dvar_cast_double_to_string(dvar* v)
-{
-   char* str = floatToStr((double) v->v_double);
-   dvar_assign_string_move(v, str);
-}
-
-void dvar_cast_char_to_int(dvar* v)
-{
-   dvar_assign_int(v, (oat_int) v->v_char);
-}
-
-void dvar_cast_char_to_double(dvar* v)
-{
-   dvar_assign_double(v, (oat_double) v->v_char);
-}
-
-void dvar_cast_char_to_bool(dvar* v)
-{
-   if(v->v_char)
-      dvar_assign_bool(v, TRUE);
-   else
-      dvar_assign_bool(v, FALSE);
-}
-
-void dvar_cast_char_to_string(dvar* v)
-{
-   char c = v->v_char;
-   dvar_assign_string(v, &c, 1);
-}
-
-void dvar_cast_bool_to_int(dvar* v)
-{
-   dvar_assign_int(v, (oat_int) v->v_bool);
-}
-
-void dvar_cast_bool_to_double(dvar* v)
-{
-   dvar_assign_double(v, (oat_double) v->v_bool);
-}
-
-void dvar_cast_bool_to_char(dvar* v)
-{
-   dvar_assign_char(v, (char) v->v_bool);
-}
-
-void dvar_cast_bool_to_string(dvar* v)
-{
-   if(v->v_bool)
-      dvar_assign_string(v, "true", 4);
-   else
-      dvar_assign_string(v, "false", 5);
-}
-
-void dvar_cast_string_to_int(dvar* v)
-{
-   int ok;
-   long x = strToInt(v->v_string, &ok);
-   if(!ok)
-      err("Failed to cast string to int; str = \"%s\"", v->v_string);
-   dvar_assign_int(v, (oat_int) x);
-}
-
-void dvar_cast_string_to_double(dvar* v)
-{
-   int ok;
-   double x = strToFloat(v->v_string, &ok);
-   if(!ok)
-      err("Failed to cast string to double; str = \"%s\"", v->v_string);
-   dvar_assign_double(v, (oat_double) x);
-}
-
-void dvar_cast_string_to_char(dvar* v)
-{
-   if(strlen(v->v_string) != 1)
-      err("Failed to cast string to char; str = \"%s\"", v->v_string);
-   dvar_assign_char(v, v->v_string[0]);
-}
-
-void dvar_cast_string_to_bool(dvar* v)
-{
-   dvar_assign_bool(v, v->v_string[0] != '\0');
-}
-
-
-
-void dvar_op_postinc_int(dvar* a, dvar* res)
-{
-   dvar_assign_int(res, a->v_int);
-   ++a->v_int;
-}
-
-void dvar_op_postinc_double(dvar* a, dvar* res)
-{
-   dvar_assign_double(res, a->v_double);
-   ++a->v_double;
-}
-
-void dvar_op_postinc_char(dvar* a, dvar* res)
-{
-   dvar_assign_char(res, a->v_char);
-   ++a->v_char;
-}
-
-void dvar_op_postdec_int(dvar* a, dvar* res)
-{
-   dvar_assign_int(res, a->v_int);
-   --a->v_int;
-}
-
-void dvar_op_postdec_double(dvar* a, dvar* res)
-{
-   dvar_assign_double(res, a->v_double);
-   --a->v_double;
-}
-
-void dvar_op_postdec_char(dvar* a, dvar* res)
-{
-   dvar_assign_char(res, a->v_char);
-   --a->v_char;
-}
-
-void dvar_op_preinc_int(dvar* a, dvar* res)
-{
-   dvar_assign_int(res, a->v_int + 1);
-   ++a->v_int;
-}
-
-void dvar_op_preinc_double(dvar* a, dvar* res)
-{
-   dvar_assign_double(res, a->v_double + 1);
-   ++a->v_double;
-}
-
-void dvar_op_preinc_char(dvar* a, dvar* res)
-{
-   dvar_assign_char(res, a->v_char + 1);
-   ++a->v_char;
-}
-
-void dvar_op_predec_int(dvar* a, dvar* res)
-{
-   dvar_assign_int(res, a->v_int - 1);
-   --a->v_int;
-}
-
-void dvar_op_predec_double(dvar* a, dvar* res)
-{
-   dvar_assign_double(res, a->v_double - 1);
-   --a->v_double;
-}
-
-void dvar_op_predec_char(dvar* a, dvar* res)
-{
-   dvar_assign_char(res, a->v_char - 1);
-   --a->v_char;
-}
-
-void dvar_op_uplus_int(const dvar* a, dvar* res)
-{
-   dvar_assign_int(res, a->v_int);
-}
-
-void dvar_op_uplus_double(const dvar* a, dvar* res)
-{
-   dvar_assign_double(res, a->v_double);
-}
-
-void dvar_op_uplus_char(const dvar* a, dvar* res)
-{
-   dvar_assign_char(res, a->v_char);
-}
-
-void dvar_op_uminus_int(const dvar* a, dvar* res)
-{
-   dvar_assign_int(res, -a->v_int);
-}
-
-void dvar_op_uminus_double(const dvar* a, dvar* res)
-{
-   dvar_assign_double(res, -a->v_double);
-}
-
-void dvar_op_uminus_char(const dvar* a, dvar* res)
-{
-   dvar_assign_char(res, -a->v_char);
-}
-
-
-void dvar_op_mul_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_int(res, a->v_int * b->v_int);
-}
-
-void dvar_op_mul_double(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_double(res, a->v_double * b->v_double);
-}
-
-void dvar_op_mul_char(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_char(res, a->v_char * b->v_char);
-}
-
-void dvar_op_div_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_int(res, a->v_int / b->v_int);
-}
-
-void dvar_op_div_double(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_double(res, a->v_double / b->v_double);
-}
-
-void dvar_op_div_char(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_char(res, a->v_char / b->v_char);
-}
-
-void dvar_op_mod_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_int(res, a->v_int % b->v_int);
-}
-
-void dvar_op_mod_char(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_char(res, a->v_char % b->v_char);
-}
-
-void dvar_op_bplus_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_int(res, a->v_int + b->v_int);
-}
-
-void dvar_op_bplus_double(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_double(res, a->v_double + b->v_double);
-}
-
-void dvar_op_bplus_char(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_char(res, a->v_char + b->v_char);
-}
-
-void dvar_op_bplus_string(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_string_move(res, strConcat(a->v_string, b->v_string));
-}
-
-void dvar_op_bminus_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_int(res, a->v_int - b->v_int);
-}
-
-void dvar_op_bminus_double(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_double(res, a->v_double - b->v_double);
-}
-
-void dvar_op_bminus_char(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_char(res, a->v_char - b->v_char);
-}
-
-
-void dvar_op_gt_null(const dvar* a, const dvar* b, dvar* res)
-{
-   (void) a;
-   (void) b;
-   dvar_assign_bool(res, FALSE);
-}
-
-void dvar_op_gt_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_int > b->v_int);
-}
-
-void dvar_op_gt_double(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_double > b->v_double);
-}
-
-void dvar_op_gt_char(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_char > b->v_char);
-}
-
-void dvar_op_gt_bool(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_bool > b->v_bool);
-}
-
-void dvar_op_gt_string(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, strcmp(a->v_string, b->v_string) > 0);
-}
-
-
-void dvar_op_lt_null(const dvar* a, const dvar* b, dvar* res)
-{
-   (void) a;
-   (void) b;
-   dvar_assign_bool(res, FALSE);
-}
-
-void dvar_op_lt_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_int < b->v_int);
-}
-
-void dvar_op_lt_double(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_double < b->v_double);
-}
-
-void dvar_op_lt_char(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_char < b->v_char);
-}
-
-void dvar_op_lt_bool(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_bool < b->v_bool);
-}
-
-void dvar_op_lt_string(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, strcmp(a->v_string, b->v_string) < 0);
-}
-
-void dvar_op_geq_null(const dvar* a, const dvar* b, dvar* res)
-{
-   (void) a;
-   (void) b;
-   dvar_assign_bool(res, TRUE);
-}
-
-void dvar_op_geq_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_int >= b->v_int);
-}
-
-void dvar_op_geq_double(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_double >= b->v_double);
-}
-
-void dvar_op_geq_char(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_char >= b->v_char);
-}
-
-void dvar_op_geq_bool(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_bool >= b->v_bool);
-}
-
-void dvar_op_geq_string(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, strcmp(a->v_string, b->v_string) >= 0);
-}
-
-void dvar_op_leq_null(const dvar* a, const dvar* b, dvar* res)
-{
-   (void) a;
-   (void) b;
-   dvar_assign_bool(res, TRUE);
-}
-
-void dvar_op_leq_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_int <= b->v_int);
-}
-
-void dvar_op_leq_double(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_double <= b->v_double);
-}
-
-void dvar_op_leq_char(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_char <= b->v_char);
-}
-
-void dvar_op_leq_bool(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_bool <= b->v_bool);
-}
-
-
-void dvar_op_leq_string(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, strcmp(a->v_string, b->v_string) <= 0);
-}
-
-void dvar_op_eq_null(const dvar* a, const dvar* b, dvar* res)
-{
-   (void) a;
-   (void) b;
-   dvar_assign_bool(res, TRUE);
-}
-
-void dvar_op_eq_int(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_int == b->v_int);
-}
-
-void dvar_op_eq_double(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, a->v_double == b->v_double);
-}
 
-void dvar_op_eq_char(const dvar* a, const dvar* b, dvar* res)
+void dvar_putnull(dvar* v, t_vm_mode mode)
 {
-   dvar_assign_bool(res, a->v_char == b->v_char);
+   dvar_clear(v);
+   dvar_init_null(v, mode);
 }
 
-void dvar_op_eq_bool(const dvar* a, const dvar* b, dvar* res)
+void dvar_putint(dvar* v, t_vm_mode mode, t_vm_int x)
 {
-   dvar_assign_bool(res, a->v_bool == b->v_bool);
+   dvar_clear(v);
+   dvar_init_int(v, mode, x);
 }
 
-void dvar_op_eq_string(const dvar* a, const dvar* b, dvar* res)
+void dvar_putdouble(dvar* v, t_vm_mode mode, t_vm_double x)
 {
-   dvar_assign_bool(res, strcmp(a->v_string, b->v_string) == 0);
+   dvar_clear(v);
+   dvar_init_double(v, mode, x);
 }
 
-void dvar_op_neq_null(const dvar* a, const dvar* b, dvar* res)
+void dvar_putchar(dvar* v, t_vm_mode mode, t_vm_char x)
 {
-   (void) a;
-   (void) b;
-   dvar_assign_bool(res, FALSE);
+   dvar_clear(v);
+   dvar_init_char(v, mode, x);
 }
 
-void dvar_op_neq_int(const dvar* a, const dvar* b, dvar* res)
+void dvar_putbool(dvar* v, t_vm_mode mode, t_vm_bool x)
 {
-   dvar_assign_bool(res, a->v_int != b->v_int);
+   dvar_clear(v);
+   dvar_init_bool(v, mode, x);
 }
 
-void dvar_op_neq_double(const dvar* a, const dvar* b, dvar* res)
+void dvar_putstring(dvar* v, t_vm_mode mode, const char* x, t_vm_int len)
 {
-   dvar_assign_bool(res, a->v_double != b->v_double);
+   dvar_clear(v);
+   dvar_init_str(v, mode, x, len);
 }
 
-void dvar_op_neq_char(const dvar* a, const dvar* b, dvar* res)
+void dvar_putfunction(dvar* v, t_vm_mode mode, t_vm_addr addr)
 {
-   dvar_assign_bool(res, a->v_char != b->v_char);
+   dvar_clear(v);
+   dvar_init_function(v, mode, addr);
 }
 
-void dvar_op_neq_bool(const dvar* a, const dvar* b, dvar* res)
+void dvar_putsyscall(dvar* v, t_vm_mode mode, t_vm_int syscall)
 {
-   dvar_assign_bool(res, a->v_bool != b->v_bool);
+   dvar_clear(v);
+   dvar_init_syscall(v, mode, syscall);
 }
 
-void dvar_op_neq_string(const dvar* a, const dvar* b, dvar* res)
+void dvar_putvar(dvar* v, t_vm_mode mode, dvar* src)
 {
-   dvar_assign_bool(res, strcmp(a->v_string, b->v_string) != 0);
+   dvar_move(v, src);
+   v->mode = mode;
 }
 
-
-void dvar_op_assign_null(dvar* a, const dvar* b, dvar* res)
-{
-   (void) b;
-   dvar_assign_null(a);
-   dvar_assign_null(res);
-}
-
-void dvar_op_assign_int(dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_int(a, b->v_int);
-   dvar_assign_int(res, b->v_int);
-}
-
-void dvar_op_assign_double(dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_double(a, b->v_double);
-   dvar_assign_double(res, b->v_double);
-}
-
-void dvar_op_assign_char(dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_char(a, b->v_char);
-   dvar_assign_char(res, b->v_char);
-}
-
-void dvar_op_assign_bool(dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(a, b->v_bool);
-   dvar_assign_bool(res, b->v_bool);
-}
-
-void dvar_op_assign_string(dvar* a, const dvar* b, dvar* res)
-{
-   size_t len = strlen(b->v_string);
-   dvar_assign_string(a, b->v_string, len);
-   dvar_assign_string(res, b->v_string, len);
-}
-
-
-void dvar_op_pluseq_int(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_int += b->v_int;
-   dvar_assign_int(res, a->v_int);
-}
-
-void dvar_op_pluseq_double(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_double += b->v_double;
-   dvar_assign_double(res, a->v_double);
-}
-
-void dvar_op_pluseq_char(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_char += b->v_char;
-   dvar_assign_char(res, a->v_char);
-}
-
-void dvar_op_pluseq_string(dvar* a, const dvar* b, dvar* res)
-{
-   char* str = strConcat(a->v_string, b->v_string);
-   size_t len = strlen(str);
-   dvar_assign_string(a, str, len);
-   dvar_assign_string(res, str, len);
-}
-
-
-void dvar_op_minuseq_int(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_int -= b->v_int;
-   dvar_assign_int(res, a->v_int);
-}
-
-void dvar_op_minuseq_double(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_double -= b->v_double;
-   dvar_assign_double(res, a->v_double);
-}
-
-void dvar_op_minuseq_char(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_char -= b->v_char;
-   dvar_assign_char(res, a->v_char);
-}
-
-void dvar_op_muleq_int(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_int *= b->v_int;
-   dvar_assign_int(res, a->v_int);
-}
-
-void dvar_op_muleq_double(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_double -= b->v_double;
-   dvar_assign_double(res, a->v_double);
-}
-
-void dvar_op_muleq_char(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_char *= b->v_char;
-   dvar_assign_char(res, a->v_char);
-}
-
-void dvar_op_diveq_int(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_int /= b->v_int;
-   dvar_assign_int(res, a->v_int);
-}
-
-void dvar_op_diveq_double(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_double /= b->v_double;
-   dvar_assign_double(res, a->v_double);
-}
-
-void dvar_op_diveq_char(dvar* a, const dvar* b, dvar* res)
+void dvar_putref(dvar* dst, dvar* src)
 {
-   a->v_char /= b->v_char;
-   dvar_assign_char(res, a->v_char);
+   dvar_clear(dst);
+   resolve_ref_((const dvar**) &src);
+   dst->type = DVAR_TREF;
+   dst->v_ref = src;
 }
-void dvar_op_modeq_int(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_int %= b->v_int;
-   dvar_assign_int(res, a->v_int);
-}
-
-void dvar_op_modeq_char(dvar* a, const dvar* b, dvar* res)
-{
-   a->v_char %= b->v_char;
-   dvar_assign_char(res, a->v_char);
-}
-
-
-void dvar_op_postinc(dvar* a, dvar* res)
-{
-   static const f_dvar_op_postinc TABLE[] = {
-      NULL,
-      dvar_op_postinc_int,
-      dvar_op_postinc_double,
-      dvar_op_postinc_char,
-      NULL,
-      NULL
-   };
-
-   errAssert(!!TABLE[(size_t)a->type],
-             "Operator ++(post) cannot be applied to operand of type %s",
-             dvar_to_type_string(a));
 
-   TABLE[(size_t)a->type](a, res);
-}
-
-void dvar_op_postdec(dvar* a, dvar* res)
-{
-   static const f_dvar_op_postdec TABLE[] = {
-      NULL,
-      dvar_op_postdec_int,
-      dvar_op_postdec_double,
-      dvar_op_postdec_char,
-      NULL,
-      NULL
-   };
-
-   errAssert(!!TABLE[(size_t)a->type],
-             "Operator --(post) cannot be applied to operand of type %s",
-             dvar_to_type_string(a));
-
-   TABLE[(size_t)a->type](a, res);
-}
 
-void dvar_op_preinc(dvar* a, dvar* res)
+void dvar_copy(dvar* dst, const dvar* src)
 {
-   static const f_dvar_op_preinc TABLE[] = {
-      NULL,
-      dvar_op_preinc_int,
-      dvar_op_preinc_double,
-      dvar_op_preinc_char,
-      NULL,
-      NULL
-   };
+   if(dst == src)
+      return;
 
-   errAssert(!!TABLE[(size_t)a->type],
-             "Operator ++(pre) cannot be applied to operand of type %s",
-             dvar_to_type_string(a));
+   if(dst->type == DVAR_TREF)
+      reset_content_(dst);
+   reset_mode_(dst);
 
-   TABLE[(size_t)a->type](a, res);
+   resolve_ref_(&src);
+   copy_(src, dst);
 }
 
-void dvar_op_predec(dvar* a, dvar* res)
+void dvar_move(dvar* dst, dvar* src)
 {
-   static const f_dvar_op_predec TABLE[] = {
-      NULL,
-      dvar_op_predec_int,
-      dvar_op_predec_double,
-      dvar_op_predec_char,
-      NULL,
-      NULL
-   };
-
-   errAssert(!!TABLE[(size_t)a->type],
-             "Operator --(pre) cannot be applied to operand of type %s",
-             dvar_to_type_string(a));
+   if(dst == src)
+      return;
 
-   TABLE[(size_t)a->type](a, res);
-}
-
-void dvar_op_uplus(const dvar* a, dvar* res)
-{
-   static const f_dvar_op_uplus TABLE[] = {
-      NULL,
-      dvar_op_uplus_int,
-      dvar_op_uplus_double,
-      dvar_op_uplus_char,
-      NULL,
-      NULL
-   };
+   if(dst->type == DVAR_TREF)
+      reset_content_(dst);
+   reset_mode_(dst);
 
-   if(TABLE[(size_t) a->type])
+   if(src->type == DVAR_TREF)
    {
-      TABLE[(size_t) a->type](a, res);
+      copy_(src->v_ref, dst);
+      reset_(src);
+   }
+   else
+   {
+      move_(src, dst);
+   }
+}
+
+void dvar_bind(dvar* dst, const dvar* begin, const dvar* end)
+{
+   resolve_ref_((const dvar**)&dst);
+   assert(dst->type == DVAR_TFUN);
+
+   dvar_fun_bind(dst->v_fun, begin, end);
+}
+
+
+typedef void (*f_ops_inc_dec_)(dvar* op, dvar* res);
+
+static void ops_inc_dec_(const f_ops_inc_dec_ fns[], const char* operator,
+                         dvar* op, dvar* res)
+{
+   if(op->type != DVAR_TREF)
+      err("operator %s must be applied to a reference", operator);
+   op = op->v_ref;
+
+   if(!fns[op->type])
+      err("operator %s cannot be applied to operand of type %s",
+          operator, type_to_cstr_(op->type));
+
+   if(op->mode == DVAR_MCONST)
+      err("operator %s cannot be applied to const operand", operator);
+
+   if(res->type == DVAR_TREF)
+      reset_content_(res);
+   reset_mode_(res);
+
+   fns[op->type](op, res);
+}
+
+static void op_postinc_int_(dvar* op, dvar* res)
+{
+   assign_int_(res, op->v_int++);
+}
+
+static void op_postinc_double_(dvar* op, dvar* res)
+{
+   assign_double_(res, op->v_double++);
+}
+
+static void op_postinc_char_(dvar* op, dvar* res)
+{
+   assign_char_(res, op->v_char++);
+}
+
+
+void dvar_postinc(dvar* op, dvar* res)
+{
+   static const f_ops_inc_dec_ FNS[] = {
+      NULL,
+      op_postinc_int_,
+      op_postinc_double_,
+      op_postinc_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_inc_dec_(FNS, "++(post)", op, res);
+}
+
+static void op_postdec_int_(dvar* op, dvar* res)
+{
+   assign_int_(res, op->v_int--);
+}
+
+static void op_postdec_double_(dvar* op, dvar* res)
+{
+   assign_double_(res, op->v_double--);
+}
+
+static void op_postdec_char_(dvar* op, dvar* res)
+{
+   assign_char_(res, op->v_char--);
+}
+
+
+void dvar_postdec(dvar* op, dvar* res)
+{
+   static const f_ops_inc_dec_ FNS[] = {
+      NULL,
+      op_postdec_int_,
+      op_postdec_double_,
+      op_postdec_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_inc_dec_(FNS, "--(post)", op, res);
+}
+
+static void op_preinc_int_(dvar* op, dvar* res)
+{
+   assign_int_(res, ++op->v_int);
+}
+
+static void op_preinc_double_(dvar* op, dvar* res)
+{
+   assign_double_(res, ++op->v_double);
+}
+
+static void op_preinc_char_(dvar* op, dvar* res)
+{
+   assign_char_(res, ++op->v_char);
+}
+
+
+void dvar_preinc(dvar* op, dvar* res)
+{
+   static const f_ops_inc_dec_ FNS[] = {
+      NULL,
+      op_preinc_int_,
+      op_preinc_double_,
+      op_preinc_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_inc_dec_(FNS, "++(pre)", op, res);
+}
+
+static void op_predec_int_(dvar* op, dvar* res)
+{
+   assign_int_(res, --op->v_int);
+}
+
+static void op_predec_double_(dvar* op, dvar* res)
+{
+   assign_double_(res, --op->v_double);
+}
+
+static void op_predec_char_(dvar* op, dvar* res)
+{
+   assign_char_(res, --op->v_char);
+}
+
+
+void dvar_predec(dvar* op, dvar* res)
+{
+   static const f_ops_inc_dec_ FNS[] = {
+      NULL,
+      op_predec_int_,
+      op_predec_double_,
+      op_predec_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_inc_dec_(FNS, "--(post)", op, res);
+}
+
+
+
+
+
+typedef void (*f_ops_unary_)(const dvar* op, dvar* res);
+
+static void ops_unary_(const f_ops_unary_ fns[], const char* operator,
+                       const dvar* op, dvar* res)
+{
+   resolve_ref_(&op);
+   if(res->type == DVAR_TREF)
+      reset_content_(res);
+   reset_mode_(res);
+
+   if(fns[op->type])
+   {
+      fns[op->type](op, res);
       return;
    }
 
-   char type = dvar_find_type_(a, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator + cannot be applied to operand of type %s",
-             dvar_to_type_string(a));
+   t_vm_type type = find_type_(op, (a_typed_fns) fns);
+   if(type == DVAR_TNOT)
+      err("Operator %s cannot be applied to operand of type %s",
+          operator, type_to_cstr_(op->type));
 
    dvar ac;
    dvar_init(&ac);
-   dvar_assign_var(&ac, a);
-   dvar_cast_to(&ac, type);
-   TABLE[(size_t) type](&ac, res);
-   dvar_erase(&ac);
+   copy_(op, &ac);
+   cast_to_(&ac, type);
+   fns[type](&ac, res);
+   free_content_(&ac);
 }
 
-void dvar_op_uminus(const dvar* a, dvar* res)
+static void op_uplus_int_(const dvar* op, dvar* res)
 {
-   static const f_dvar_op_uminus TABLE[] = {
+   assign_int_(res, op->v_int);
+}
+
+static void op_uplus_double_(const dvar* op, dvar* res)
+{
+   assign_double_(res, op->v_double);
+}
+
+static void op_uplus_char_(const dvar* op, dvar* res)
+{
+   assign_char_(res, op->v_char);
+}
+
+void dvar_uplus(const dvar* op, dvar* res)
+{
+   static const f_ops_unary_ FNS[] = {
       NULL,
-      dvar_op_uminus_int,
-      dvar_op_uminus_double,
-      dvar_op_uminus_char,
+      op_uplus_int_,
+      op_uplus_double_,
+      op_uplus_char_,
+      NULL,
       NULL,
       NULL
    };
 
-   if(TABLE[(size_t) a->type])
+   ops_unary_(FNS, "+", op, res);
+}
+
+static void op_uminus_int_(const dvar* op, dvar* res)
+{
+   assign_int_(res, - op->v_int);
+}
+
+static void op_uminus_double_(const dvar* op, dvar* res)
+{
+   assign_double_(res, - op->v_double);
+}
+
+static void op_uminus_char_(const dvar* op, dvar* res)
+{
+   assign_char_(res, - op->v_char);
+}
+
+void dvar_uminus(const dvar* op, dvar* res)
+{
+   static const f_ops_unary_ FNS[] = {
+      NULL,
+      op_uminus_int_,
+      op_uminus_double_,
+      op_uminus_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_unary_(FNS, "-", op, res);
+}
+
+static void op_lnot_gen_(const dvar* op, dvar* res)
+{
+   assign_bool_(res, !to_bool_(op));
+}
+
+void dvar_lnot(const dvar* op, dvar* res)
+{
+   static const f_ops_unary_ FNS[] = {
+      op_lnot_gen_,
+      op_lnot_gen_,
+      op_lnot_gen_,
+      op_lnot_gen_,
+      op_lnot_gen_,
+      op_lnot_gen_,
+      op_lnot_gen_
+   };
+
+   ops_unary_(FNS, "!", op, res);
+}
+
+static void op_bnot_int_(const dvar* op, dvar* res)
+{
+   assign_int_(res, ~ op->v_int);
+}
+
+static void op_bnot_char_(const dvar* op, dvar* res)
+{
+   assign_char_(res, ~ op->v_char);
+}
+
+void dvar_bnot(const dvar* op, dvar* res)
+{
+   static const f_ops_unary_ FNS[] = {
+      NULL,
+      op_bnot_int_,
+      NULL,
+      op_bnot_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_unary_(FNS, "~", op, res);
+}
+
+
+
+typedef void (*f_ops_binary_)(const dvar* a, const dvar* b, dvar* res);
+
+static void ops_binary_(const f_ops_binary_ fns[], const char* operator,
+                        const dvar* a, const dvar* b, dvar* res)
+{
+   resolve_ref_(&a);
+   resolve_ref_(&b);
+
+   if(res->type == DVAR_TREF)
+      reset_content_(res);
+   reset_mode_(res);
+
+   if(a->type == b->type && fns[a->type])
    {
-      TABLE[(size_t) a->type](a, res);
+      fns[a->type](a, b, res);
       return;
    }
 
-   char type = dvar_find_type_(a, (a_dvar_typed_fns) TABLE);
+   t_vm_type type = find_type_2_(a, b, (a_typed_fns) fns);
 
-   errAssert(type != DVAR_TNOT,
-             "Operator - cannot be applied to operand of type %s",
-             dvar_to_type_string(a));
+   if(type == DVAR_TNOT)
+      err("Operator %s cannot be applied to operands of type %s and %s",
+          operator, type_to_cstr_(a->type), type_to_cstr_(b->type));
+
+   const dvar* ac;
+   const dvar* bc;
+   dvar v1;
+   dvar v2;
+
+   if(a->type == type)
+   {
+      ac = a;
+   }
+   else
+   {
+      dvar_init(&v1);
+      copy_(a, &v1);
+      cast_to_(&v1, type);
+      ac = &v1;
+   }
+
+   if(b->type == type)
+   {
+      bc = b;
+   }
+   else
+   {
+      dvar_init(&v2);
+      copy_(b, &v2);
+      cast_to_(&v2, type);
+      bc = &v2;
+   }
+
+   fns[type](ac, bc, res);
+
+   if(a->type != type)
+      free_content_(&v1);
+   if(b->type != type)
+      free_content_(&v2);
+}
+
+
+static void op_mul_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int * b->v_int);
+}
+
+static void op_mul_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_double_(res, a->v_double * b->v_double);
+}
+
+static void op_mul_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char * b->v_char);
+}
+
+void dvar_mul(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_mul_int_,
+      op_mul_double_,
+      op_mul_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_binary_(FNS, "*", a, b, res);
+}
+
+static void op_div_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int / b->v_int);
+}
+
+static void op_div_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_double_(res, a->v_double / b->v_double);
+}
+
+static void op_div_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char / b->v_char);
+}
+
+void dvar_div(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_div_int_,
+      op_div_double_,
+      op_div_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_binary_(FNS, "/", a, b, res);
+}
+
+static void op_mod_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int % b->v_int);
+}
+
+static void op_mod_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char % b->v_char);
+}
+
+void dvar_mod(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_mod_int_,
+      NULL,
+      op_mod_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_binary_(FNS, "%", a, b, res);
+}
+
+static void op_bplus_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int + b->v_int);
+}
+
+static void op_bplus_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_double_(res, a->v_double + b->v_double);
+}
+
+static void op_bplus_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char + b->v_char);
+}
+
+static void op_bplus_str_(const dvar* a, const dvar* b, dvar* res)
+{
+   dvar_str* as = a->v_str;
+   dvar_str* bs = b->v_str;
+   assign_str_(res, as);
+   dvar_str_concat(res->v_str, bs);
+}
+
+void dvar_bplus(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_bplus_int_,
+      op_bplus_double_,
+      op_bplus_char_,
+      NULL,
+      op_bplus_str_,
+      NULL
+   };
+
+   ops_binary_(FNS, "+", a, b, res);
+}
+
+static void op_bminus_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int - b->v_int);
+}
+
+static void op_bminus_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_double_(res, a->v_double - b->v_double);
+}
+
+static void op_bminus_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char - b->v_char);
+}
+
+void dvar_bminus(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_bminus_int_,
+      op_bminus_double_,
+      op_bminus_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_binary_(FNS, "-", a, b, res);
+}
+
+static void op_gt_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_int > b->v_int));
+}
+
+static void op_gt_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_double > b->v_double));
+}
+
+static void op_gt_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_char > b->v_char));
+}
+
+static void op_gt_str_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (dvar_str_cmp(a->v_str, b->v_str) > 0));
+}
+
+void dvar_gt(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_gt_int_,
+      op_gt_double_,
+      op_gt_char_,
+      NULL,
+      op_gt_str_,
+      NULL
+   };
+
+   ops_binary_(FNS, ">", a, b, res);
+}
+
+static void op_lt_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_int < b->v_int));
+}
+
+static void op_lt_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_double < b->v_double));
+}
+
+static void op_lt_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_char < b->v_char));
+}
+
+static void op_lt_str_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (dvar_str_cmp(a->v_str, b->v_str) < 0));
+}
+
+void dvar_lt(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_lt_int_,
+      op_lt_double_,
+      op_lt_char_,
+      NULL,
+      op_lt_str_,
+      NULL
+   };
+
+   ops_binary_(FNS, "<", a, b, res);
+}
+
+static void op_geq_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_int >= b->v_int));
+}
+
+static void op_geq_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_double >= b->v_double));
+}
+
+static void op_geq_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_char >= b->v_char));
+}
+
+static void op_geq_str_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (dvar_str_cmp(a->v_str, b->v_str) >= 0));
+}
+
+void dvar_geq(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_geq_int_,
+      op_geq_double_,
+      op_geq_char_,
+      NULL,
+      op_geq_str_,
+      NULL
+   };
+
+   ops_binary_(FNS, ">=", a, b, res);
+}
+
+static void op_leq_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_int <= b->v_int));
+}
+
+static void op_leq_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_double <= b->v_double));
+}
+
+static void op_leq_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_char <= b->v_char));
+}
+
+static void op_leq_str_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (dvar_str_cmp(a->v_str, b->v_str) <= 0));
+}
+
+void dvar_leq(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_leq_int_,
+      op_leq_double_,
+      op_leq_char_,
+      NULL,
+      op_leq_str_,
+      NULL
+   };
+
+   ops_binary_(FNS, "<=", a, b, res);
+}
+
+
+static void op_eq_null_(const dvar* a, const dvar* b, dvar* res)
+{
+   (void) a;
+   (void) b;
+   assign_bool_(res, TRUE);
+}
+
+static void op_eq_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_int == b->v_int));
+}
+
+static void op_eq_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_double == b->v_double));
+}
+
+static void op_eq_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_char == b->v_char));
+}
+
+static void op_eq_bool_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_bool == b->v_bool));
+}
+
+static void op_eq_str_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (dvar_str_cmp(a->v_str, b->v_str) == 0));
+}
+
+static void op_eq_fun_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, dvar_fun_equals(a->v_fun, b->v_fun));
+}
+
+void dvar_eq(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      op_eq_null_,
+      op_eq_int_,
+      op_eq_double_,
+      op_eq_char_,
+      op_eq_bool_,
+      op_eq_str_,
+      op_eq_fun_
+   };
+
+   ops_binary_(FNS, "==", a, b, res);
+}
+
+static void op_neq_null_(const dvar* a, const dvar* b, dvar* res)
+{
+   (void) a;
+   (void) b;
+   assign_bool_(res, FALSE);
+}
+
+static void op_neq_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_int != b->v_int));
+}
+
+static void op_neq_double_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_double != b->v_double));
+}
+
+static void op_neq_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_char != b->v_char));
+}
+
+static void op_neq_bool_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (a->v_bool != b->v_bool));
+}
+
+static void op_neq_str_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (dvar_str_cmp(a->v_str, b->v_str) != 0));
+}
+
+static void op_neq_fun_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (!dvar_fun_equals(a->v_fun, b->v_fun)));
+}
+
+void dvar_neq(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      op_neq_null_,
+      op_neq_int_,
+      op_neq_double_,
+      op_neq_char_,
+      op_neq_bool_,
+      op_neq_str_,
+      op_neq_fun_
+   };
+
+   ops_binary_(FNS, "!=", a, b, res);
+}
+
+static void op_land_gen_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (to_bool_(a) && to_bool_(b)));
+}
+
+void dvar_land(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      op_land_gen_,
+      op_land_gen_,
+      op_land_gen_,
+      op_land_gen_,
+      op_land_gen_,
+      op_land_gen_,
+      op_land_gen_
+   };
+
+   ops_binary_(FNS, "&&", a, b, res);
+}
+
+static void op_lor_gen_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(res, (t_vm_bool) (to_bool_(a) || to_bool_(b)));
+}
+
+void dvar_lor(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      op_lor_gen_,
+      op_lor_gen_,
+      op_lor_gen_,
+      op_lor_gen_,
+      op_lor_gen_,
+      op_lor_gen_,
+      op_lor_gen_
+   };
+
+   ops_binary_(FNS, "||", a, b, res);
+}
+
+static void op_lshift_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int << b->v_int);
+}
+
+static void op_lshift_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char << b->v_char);
+}
+
+void dvar_lshift(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_lshift_int_,
+      NULL,
+      op_lshift_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_binary_(FNS, "<<", a, b, res);
+}
+
+static void op_rshift_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int >> b->v_int);
+}
+
+static void op_rshift_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char >> b->v_char);
+}
+
+void dvar_rshift(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_rshift_int_,
+      NULL,
+      op_rshift_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_binary_(FNS, ">>", a, b, res);
+}
+
+static void op_band_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int & b->v_int);
+}
+
+static void op_band_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char & b->v_char);
+}
+
+void dvar_band(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_band_int_,
+      NULL,
+      op_band_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_binary_(FNS, "&", a, b, res);
+}
+
+static void op_bxor_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int ^ b->v_int);
+}
+
+static void op_bxor_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char ^ b->v_char);
+}
+
+void dvar_bxor(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_bxor_int_,
+      NULL,
+      op_bxor_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_binary_(FNS, "^", a, b, res);
+}
+
+static void op_bor_int_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int | b->v_int);
+}
+
+static void op_bor_char_(const dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char | b->v_char);
+}
+
+void dvar_bor(const dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_binary_ FNS[] = {
+      NULL,
+      op_bor_int_,
+      NULL,
+      op_bor_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_binary_(FNS, "|", a, b, res);
+}
+
+
+typedef void (*f_ops_assign_)(dvar* a, const dvar* b, dvar* res);
+
+static void op_assign_null_(dvar* a, const dvar* b, dvar* res)
+{
+   (void) b;
+   assign_null_(a);
+   assign_null_(res);
+}
+
+static void op_assign_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(a, b->v_int);
+   assign_int_(res, a->v_int);
+}
+
+static void op_assign_double_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_double_(a, b->v_double);
+   assign_double_(res, a->v_double);
+}
+
+static void op_assign_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(a, b->v_char);
+   assign_char_(res, a->v_char);
+}
+
+static void op_assign_bool_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_bool_(a, b->v_bool);
+   assign_bool_(res, a->v_bool);
+}
+
+static void op_assign_str_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_str_(a, b->v_str);
+   assign_str_(res, a->v_str);
+}
+
+static void op_assign_fun_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_fun_(a, b->v_fun);
+   assign_fun_(res, a->v_fun);
+}
+
+void dvar_assign(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      op_assign_null_,
+      op_assign_int_,
+      op_assign_double_,
+      op_assign_char_,
+      op_assign_bool_,
+      op_assign_str_,
+      op_assign_fun_
+   };
+
+   if(a->type != DVAR_TREF)
+      err("left operand of = must be a reference");
+   a = a->v_ref;
+
+   resolve_ref_(&b);
+   if(res->type == DVAR_TREF)
+      reset_content_(res);
+   reset_mode_(res);
+
+   if(a->mode == DVAR_MCONST)
+      err("left operand of = cannot be a const");
+
+   if(a->mode == DVAR_MTCONST && a->type != b->type)
+   {
+      if(!has_implicit_cast_(b->type, a->type))
+         err("left operand of = is type const %s and right operand is of type %s",
+             type_to_cstr_(a->type), type_to_cstr_(b->type));
+
+      dvar bc;
+      dvar_init(&bc);
+      copy_(b, &bc);
+      cast_to_(&bc, a->type);
+      FNS[bc.type](a, &bc, res);
+      free_content_(&bc);
+   }
+
+   else
+   {
+      FNS[b->type](a, b, res);
+   }
+}
+
+static void ops_assign_(const f_ops_assign_ fns[], const char* operator,
+                        dvar* a, const dvar* b, dvar* res)
+{
+   if(a->type != DVAR_TREF)
+      err("left operand of %s must be a reference", operator);
+   a = a->v_ref;
+
+   if(a->mode == DVAR_MCONST)
+      err("left operand of %s cannot be a const", operator);
+
+   if(res->type == DVAR_TREF)
+      reset_content_(res);
+   resolve_ref_(&b);
+   reset_mode_(res);
+
+   if(a->type == b->type && fns[a->type])
+   {
+      fns[a->type](a, b, res);
+      return;
+   }
+
+   if(!fns[a->type] || !has_implicit_cast_(b->type, a->type))
+      err("Operator %s cannot be applied to operands of type %s and %s",
+          operator, type_to_cstr_(a->type), type_to_cstr_(b->type));
+
+   dvar bc;
+   dvar_init(&bc);
+   copy_(b, &bc);
+   cast_to_(&bc, a->type);
+   fns[a->type](a, &bc, res);
+   free_content_(&bc);
+}
+
+static void op_pluseq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int += b->v_int);
+}
+
+static void op_pluseq_double_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_double_(res, a->v_double += b->v_double);
+}
+
+static void op_pluseq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char += b->v_char);
+}
+
+static void op_pluseq_str_(dvar* a, const dvar* b, dvar* res)
+{
+   dvar_str_concat(a->v_str, b->v_str);
+   assign_str_(res, a->v_str);
+}
+
+void dvar_pluseq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_pluseq_int_,
+      op_pluseq_double_,
+      op_pluseq_char_,
+      NULL,
+      op_pluseq_str_,
+      NULL
+   };
+
+
+   ops_assign_(FNS, "+=", a, b, res);
+}
+
+static void op_minuseq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int -= b->v_int);
+}
+
+static void op_minuseq_double_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_double_(res, a->v_double -= b->v_double);
+}
+
+static void op_minuseq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char -= b->v_char);
+}
+
+void dvar_minuseq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_minuseq_int_,
+      op_minuseq_double_,
+      op_minuseq_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_assign_(FNS, "-=", a, b, res);
+}
+
+static void op_muleq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int *= b->v_int);
+}
+
+static void op_muleq_double_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_double_(res, a->v_double *= b->v_double);
+}
+
+static void op_muleq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char *= b->v_char);
+}
+
+void dvar_muleq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_muleq_int_,
+      op_muleq_double_,
+      op_muleq_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_assign_(FNS, "*=", a, b, res);
+}
+
+static void op_diveq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int /= b->v_int);
+}
+
+static void op_diveq_double_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_double_(res, a->v_double /= b->v_double);
+}
+
+static void op_diveq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char /= b->v_char);
+}
+
+void dvar_diveq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_diveq_int_,
+      op_diveq_double_,
+      op_diveq_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_assign_(FNS, "/=", a, b, res);
+}
+
+static void op_modeq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int %= b->v_int);
+}
+
+static void op_modeq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char %= b->v_char);
+}
+
+
+void dvar_modeq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_modeq_int_,
+      NULL,
+      op_modeq_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_assign_(FNS, "%=", a, b, res);
+}
+
+static void op_lshifteq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int <<= b->v_int);
+}
+
+static void op_lshifteq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char <<= b->v_char);
+}
+
+
+void dvar_lshifteq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_lshifteq_int_,
+      NULL,
+      op_lshifteq_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_assign_(FNS, "<<=", a, b, res);
+}
+
+static void op_rshifteq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int >>= b->v_int);
+}
+
+static void op_rshifteq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char >>= b->v_char);
+}
+
+
+void dvar_rshifteq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_rshifteq_int_,
+      NULL,
+      op_rshifteq_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_assign_(FNS, ">>=", a, b, res);
+}
+
+static void op_bandeq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int &= b->v_int);
+}
+
+static void op_bandeq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char &= b->v_char);
+}
+
+
+void dvar_bandeq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_bandeq_int_,
+      NULL,
+      op_bandeq_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_assign_(FNS, "&=", a, b, res);
+}
+
+static void op_bxoreq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int ^= b->v_int);
+}
+
+static void op_bxoreq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char ^= b->v_char);
+}
+
+
+void dvar_bxoreq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_bxoreq_int_,
+      NULL,
+      op_bxoreq_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_assign_(FNS, "^=", a, b, res);
+}
+
+static void op_boreq_int_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_int_(res, a->v_int |= b->v_int);
+}
+
+static void op_boreq_char_(dvar* a, const dvar* b, dvar* res)
+{
+   assign_char_(res, a->v_char |= b->v_char);
+}
+
+
+void dvar_boreq(dvar* a, const dvar* b, dvar* res)
+{
+   static const f_ops_assign_ FNS[] = {
+      NULL,
+      op_boreq_int_,
+      NULL,
+      op_boreq_char_,
+      NULL,
+      NULL,
+      NULL
+   };
+
+   ops_assign_(FNS, "|=", a, b, res);
+}
+
+void dvar_ternary(const dvar* a, const dvar* b, const dvar* c, dvar* d)
+{
+   resolve_ref_(&a);
+   resolve_ref_(&b);
+   resolve_ref_(&c);
+
+   if(d->type == DVAR_TREF)
+      reset_content_(d);
+   reset_mode_(d);
+
+   if(to_bool_(a))
+      copy_(b, d);
+   else
+      copy_(c, d);
+}
+
+static t_vm_int subscript_to_int_(const dvar* a, const char* message)
+{
+   if(a->type == DVAR_TINT)
+      return a->v_int;
+
+   if(has_implicit_cast_(a->type, DVAR_TINT))
+   {
+      dvar b;
+      dvar_init(&b);
+      copy_(a, &b);
+      cast_to_(&b, DVAR_TINT);
+      t_vm_int x = b.v_int;
+      free_content_(&b);
+      return x;
+   }
+
+   err(message, type_to_cstr_(a->type));
+   return 0;
+}
+
+typedef void (*f_op_subscript_)(const dvar* a, const dvar* b, dvar* c);
+
+static void op_subscript_str_(const dvar* a, const dvar* b, dvar* c)
+{
+   t_vm_int pos = subscript_to_int_(
+      b, "string: cannot cast right operand of [] (%s) to int");
+
+   const dvar_str* str = a->v_str;
+
+   if(pos < 0 || pos >= str->len)
+   {
+      err("operator[] : cannot access index %ld of string of size %ld",
+          pos, str->len);
+   }
+
+
+   dvar* cvar = str->chars + pos;
+   free_content_(c);
+   c->type = DVAR_TREF;
+   c->v_ref = cvar;
+}
+
+void dvar_subscript(const dvar* a, const dvar* b, dvar* c)
+{
+   static const f_op_subscript_ FNS[] = {
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      op_subscript_str_,
+      NULL
+   };
+
+   resolve_ref_(&a);
+   resolve_ref_(&b);
+
+   if(c->type == DVAR_TREF)
+      reset_content_(c);
+   reset_mode_(c);
+
+   if(FNS[a->type])
+   {
+      FNS[a->type](a, b, c);
+      return;
+   }
+
+   t_vm_type type = find_type_(a, (a_typed_fns) FNS);
+   if(type == DVAR_TNOT)
+      err("Operator[] cannot be applied to left operand of type %s",
+          type_to_cstr_(a->type));
 
    dvar ac;
    dvar_init(&ac);
-   dvar_assign_var(&ac, a);
-   dvar_cast_to(&ac, type);
-   TABLE[(size_t) type](&ac, res);
-   dvar_erase(&ac);
+   copy_(a, &ac);
+   cast_to_(&ac, type);
+   FNS[type](&ac, b, c);
+   free_content_(&ac);
 }
 
-void dvar_op_lnot(const dvar* a, dvar* res)
+void dvar_member(const dvar* v, const char* str, t_vm_int len, dvar* res)
 {
-   dvar_assign_bool(res, (oat_bool) (!dvar_to_bool(a)));
+   char* name = malloc(len + 1);
+   memcpy(name, str, len);
+   name[len] = '\0';
+
+   resolve_ref_(&v);
+
+   if(strcmp(name, "toString") != 0)
+   {
+      err("Variable of type %s doesn't have a member %s",
+          type_to_cstr_(v->type), name);
+   }
+
+   dvar_putsyscall(res, 1, VM_SYSCALL_TOSTRING);
+   dvar_fun_bind(res->v_fun, v, v + 1);
 }
 
-void dvar_op_mul(const dvar* a, const dvar* b, dvar* res)
+
+void dvar_print(const dvar* v)
 {
-   static const f_dvar_op_mul TABLE[] = {
-      NULL,
-      dvar_op_mul_int,
-      dvar_op_mul_double,
-      dvar_op_mul_char,
-      NULL,
-      NULL
-   };
+   const char* ref;
+   const char* qualifier;
 
-   if(a->type == b->type && TABLE[(size_t) a->type])
+   if(v->type == DVAR_TREF)
    {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator * cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
+      v = v->v_ref;
+      ref = "&";
    }
    else
    {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
+      ref = "";
    }
 
-   if(b->type == type)
-   {
-      bc = b;
-   }
+   if(v->mode == DVAR_MCONST)
+      qualifier = "const ";
+   else if(v->mode == DVAR_MTCONST)
+      qualifier = "tconst ";
    else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_div(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_div TABLE[] = {
-      NULL,
-      dvar_op_div_int,
-      dvar_op_div_double,
-      dvar_op_div_char,
-      NULL,
-      NULL
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator / cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_mod(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_mod TABLE[] = {
-      NULL,
-      dvar_op_mod_int,
-      NULL,
-      dvar_op_mod_char,
-      NULL,
-      NULL
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator % cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_bplus(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_bplus TABLE[] = {
-      NULL,
-      dvar_op_bplus_int,
-      dvar_op_bplus_double,
-      dvar_op_bplus_char,
-      NULL,
-      dvar_op_bplus_string
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator + cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_bminus(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_bminus TABLE[] = {
-      NULL,
-      dvar_op_bminus_int,
-      dvar_op_bminus_double,
-      dvar_op_bminus_char,
-      NULL,
-      NULL
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator - cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_gt(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_gt TABLE[] = {
-      dvar_op_gt_null,
-      dvar_op_gt_int,
-      dvar_op_gt_double,
-      dvar_op_gt_char,
-      dvar_op_gt_bool,
-      dvar_op_gt_string
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator > cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_lt(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_lt TABLE[] = {
-      dvar_op_lt_null,
-      dvar_op_lt_int,
-      dvar_op_lt_double,
-      dvar_op_lt_char,
-      dvar_op_lt_bool,
-      dvar_op_lt_string
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator < cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_geq(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_geq TABLE[] = {
-      dvar_op_geq_null,
-      dvar_op_geq_int,
-      dvar_op_geq_double,
-      dvar_op_geq_char,
-      dvar_op_geq_bool,
-      dvar_op_geq_string
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator >= cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_leq(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_leq TABLE[] = {
-      dvar_op_leq_null,
-      dvar_op_leq_int,
-      dvar_op_leq_double,
-      dvar_op_leq_char,
-      dvar_op_leq_bool,
-      dvar_op_leq_string
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator <= cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_eq(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_eq TABLE[] = {
-      dvar_op_eq_null,
-      dvar_op_eq_int,
-      dvar_op_eq_double,
-      dvar_op_eq_char,
-      dvar_op_eq_bool,
-      dvar_op_eq_string
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator == cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_neq(const dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_neq TABLE[] = {
-      dvar_op_neq_null,
-      dvar_op_neq_int,
-      dvar_op_neq_double,
-      dvar_op_neq_char,
-      dvar_op_neq_bool,
-      dvar_op_neq_string
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   char type = dvar_find_type_2_(a, b, (a_dvar_typed_fns) TABLE);
-
-   errAssert(type != DVAR_TNOT,
-             "Operator != cannot be applied to operands of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   const dvar* ac;
-   const dvar* bc;
-   dvar v1;
-   dvar v2;
-
-   if(a->type == type)
-   {
-      ac = a;
-   }
-   else
-   {
-      dvar_init(&v1);
-      dvar_assign_var(&v1, a);
-      dvar_cast_to(&v1, type);
-      ac = &v1;
-   }
-
-   if(b->type == type)
-   {
-      bc = b;
-   }
-   else
-   {
-      dvar_init(&v2);
-      dvar_assign_var(&v2, b);
-      dvar_cast_to(&v2, type);
-      bc = &v2;
-   }
-
-   TABLE[(size_t) type](ac, bc, res);
-
-   if(a->type != type)
-      dvar_erase(&v1);
-   if(b->type != type)
-      dvar_erase(&v2);
-}
-
-void dvar_op_land(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, (oat_bool)
-                    (dvar_to_bool(a) && dvar_to_bool(b)));
-}
-
-void dvar_op_lor(const dvar* a, const dvar* b, dvar* res)
-{
-   dvar_assign_bool(res, (oat_bool)
-                    (dvar_to_bool(a) || dvar_to_bool(b)));
-}
-
-void dvar_op_assign(dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_assign TABLE[] = {
-      dvar_op_assign_null,
-      dvar_op_assign_int,
-      dvar_op_assign_double,
-      dvar_op_assign_char,
-      dvar_op_assign_bool,
-      dvar_op_assign_string
-   };
-
-   TABLE[(size_t)b->type](a, b, res);
-}
-
-void dvar_op_pluseq(dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_pluseq TABLE[] = {
-      NULL,
-      dvar_op_pluseq_int,
-      dvar_op_pluseq_double,
-      dvar_op_pluseq_char,
-      NULL,
-      dvar_op_pluseq_string
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   errAssert(!!TABLE[(size_t)a->type]
-             && dvar_has_implicit_cast(b->type, a->type),
-             "Operator += cannot be applied to operand of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   dvar bc;
-   dvar_init(&bc);
-   dvar_assign_var(&bc, b);
-   dvar_cast_to(&bc, a->type);
-   TABLE[(size_t) a->type](a, &bc, res);
-   dvar_erase(&bc);
-}
-
-void dvar_op_minuseq(dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_minuseq TABLE[] = {
-      NULL,
-      dvar_op_minuseq_int,
-      dvar_op_minuseq_double,
-      dvar_op_minuseq_char,
-      NULL,
-      NULL
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   errAssert(!!TABLE[(size_t)a->type]
-             && dvar_has_implicit_cast(b->type, a->type),
-             "Operator -= cannot be applied to operand of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   dvar bc;
-   dvar_init(&bc);
-   dvar_assign_var(&bc, b);
-   dvar_cast_to(&bc, a->type);
-   TABLE[(size_t) a->type](a, &bc, res);
-   dvar_erase(&bc);
-}
-
-void dvar_op_muleq(dvar* a, const dvar* b, dvar* res)
-{
-      static const f_dvar_op_muleq TABLE[] = {
-      NULL,
-      dvar_op_muleq_int,
-      dvar_op_muleq_double,
-      dvar_op_muleq_char,
-      NULL,
-      NULL
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   errAssert(!!TABLE[(size_t)a->type]
-             && dvar_has_implicit_cast(b->type, a->type),
-             "Operator *= cannot be applied to operand of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   dvar bc;
-   dvar_init(&bc);
-   dvar_assign_var(&bc, b);
-   dvar_cast_to(&bc, a->type);
-   TABLE[(size_t) a->type](a, &bc, res);
-   dvar_erase(&bc);
-}
-
-void dvar_op_diveq(dvar* a, const dvar* b, dvar* res)
-{
-      static const f_dvar_op_diveq TABLE[] = {
-      NULL,
-      dvar_op_diveq_int,
-      dvar_op_diveq_double,
-      dvar_op_diveq_char,
-      NULL,
-      NULL
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   errAssert(!!TABLE[(size_t)a->type]
-             && dvar_has_implicit_cast(b->type, a->type),
-             "Operator /= cannot be applied to operand of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   dvar bc;
-   dvar_init(&bc);
-   dvar_assign_var(&bc, b);
-   dvar_cast_to(&bc, a->type);
-   TABLE[(size_t) a->type](a, &bc, res);
-   dvar_erase(&bc);
-}
-
-void dvar_op_modeq(dvar* a, const dvar* b, dvar* res)
-{
-   static const f_dvar_op_modeq TABLE[] = {
-      NULL,
-      dvar_op_modeq_int,
-      NULL,
-      dvar_op_modeq_char,
-      NULL,
-      NULL
-   };
-
-   if(a->type == b->type && TABLE[(size_t) a->type])
-   {
-      TABLE[(size_t) a->type](a, b, res);
-      return;
-   }
-
-   errAssert(!!TABLE[(size_t)a->type]
-             && dvar_has_implicit_cast(b->type, a->type),
-             "Operator %= cannot be applied to operand of type %s and %s",
-             dvar_to_type_string(a), dvar_to_type_string(b));
-
-   dvar bc;
-   dvar_init(&bc);
-   dvar_assign_var(&bc, b);
-   dvar_cast_to(&bc, a->type);
-   TABLE[(size_t) a->type](a, &bc, res);
-   dvar_erase(&bc);
-}
-
-void dvar_print(dvar* v)
-{
-   printf("{ <%s> (", DVAR_STYPES[(size_t)v->type]);
-
-   if(v->type == DVAR_TNULL)
-      printf("null");
-   else if(v->type == DVAR_TINT)
-      printf("%ld", (long) v->v_int);
-   else if(v->type == DVAR_TDOUBLE)
-      printf("%G", (double) v->v_double);
-   else if(v->type == DVAR_TCHAR)
-      printf("'%c'", v->v_char);
-   else if(v->type == DVAR_TBOOL && v->v_bool == TRUE)
-      printf("true");
-   else if(v->type == DVAR_TBOOL && v->v_bool == FALSE)
-      printf("false");
-   else if(v->type == DVAR_TSTRING)
-      printf("\"%s\"", v->v_string);
-   else
-      printf("???");
-
-   printf(") }\n");
+      qualifier = "";
+
+   char* str = to_str_(v);
+   printf("<%s%s%s> : {%s}\n", qualifier, type_to_cstr_(v->type), ref, str);
+   free(str);
 }
