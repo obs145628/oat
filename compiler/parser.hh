@@ -20,6 +20,13 @@ class ASTStatementContinue;
 class ASTFunctionDef;
 class ASTGlobalDef;
 class ASTModule;
+class ASTArray;
+class ASTSet;
+class ASTMap;
+class ASTClass;
+class ASTClassField;
+class ASTClassMethod;
+class ASTClassVariable;
 
 class Scanner;
 
@@ -54,6 +61,11 @@ private:
    AST* expr_p1();
    AST* expr_value();
    std::vector<AST*> expr_call_list();
+   AST* expr_set_map();
+   ASTArray* expr_arr();
+   ASTSet* expr_set(Token t, AST* first);
+   ASTMap* expr_map(Token t, AST* first);
+
 
    ASTStatementsBlock* statement();
    ASTStatementsBlock* statements_block();
@@ -77,6 +89,11 @@ private:
 
    ASTGlobalDef* global_def();
    void import_def(std::vector<AST*>& child);
+
+   ASTClass* class_def();
+   ASTClassField* class_field();
+   ASTClassMethod* class_method();
+   ASTClassVariable* class_var();
 
 
 

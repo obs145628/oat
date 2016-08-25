@@ -131,3 +131,49 @@ void ASTSymbolValue::accept(ASTVisitor& v)
 {
    v.visit(this);
 }
+
+
+ASTArray::ASTArray(Token token, const std::vector<AST*>& children)
+   : AST(token, children)
+{
+   assert(token.getType() == TokenType::lbracket);
+}
+
+void ASTArray::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTSet::ASTSet(Token token, const std::vector<AST*>& children)
+   : AST(token, children)
+{
+   assert(token.getType() == TokenType::lcurlybracket);
+}
+
+void ASTSet::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTMap::ASTMap(Token token, const std::vector<AST*>& children)
+   : AST(token, children)
+{
+   assert(token.getType() == TokenType::lcurlybracket);
+   assert(children.size() % 2 == 0);
+}
+
+void ASTMap::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}
+
+ASTThis::ASTThis(Token token)
+   : AST(token)
+{
+   assert(token.isOfType(TokenType::kw_this));
+}
+
+void ASTThis::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}

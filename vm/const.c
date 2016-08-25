@@ -28,6 +28,11 @@ const t_vm_insinfos VM_INS_INFOS[] = {
    {"putstring", S_INS + S_SADDR + S_INT + S_ADDR + S_INT},
    {"putfunction", S_INS + S_SADDR + S_INT + S_ADDR},
    {"putsyscall", S_INS + S_SADDR + S_INT + S_INT},
+   {"putarr", S_INS + S_SADDR + S_INT + S_SADDR + S_INT},
+   {"putset", S_INS + S_SADDR + S_INT + S_SADDR + S_INT},
+   {"putmap", S_INS + S_SADDR + S_INT + S_SADDR + S_INT},
+   {"putobj", S_INS + S_SADDR + S_INT +  S_INT},
+   {"putclass", S_INS + S_SADDR + S_INT  + S_INT},
    {"putvar", S_INS + S_SADDR + S_INT + S_SADDR},
    {"putref", S_INS + S_SADDR + S_SADDR},
    {"copy", S_INS + S_SADDR + S_SADDR},
@@ -78,5 +83,9 @@ const t_vm_insinfos VM_INS_INFOS[] = {
    {"boreq", S_OPB},
    {"subscript", S_OPB},
    {"ternary", S_INS + 4 * S_SADDR},
-   {"member", S_INS + S_SADDR + S_ADDR + S_INT + S_SADDR}
+   {"member", S_INS + S_SADDR + S_ADDR + S_INT + S_SADDR},
+   {"defclass", S_INS + S_ADDR + S_INT +S_INT},
+   {"deffield", S_INS + S_INT + S_ADDR + S_INT +S_INT + S_SADDR},
+   {"defsfield", S_INS + S_INT + S_ADDR + S_INT +S_INT + S_SADDR},
+   {"defend", S_INS + S_INT},
 };

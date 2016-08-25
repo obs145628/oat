@@ -385,9 +385,26 @@ AST* Parser::expr_value()
       return new ASTString(t);
    }
 
+   else if(t.isOfType(TokenType::kw_this)) //this value
+   {
+      return new ASTThis(t);
+   }
+
    else if(t.isOfType(TokenType::symbol)) //variable value
    {
       return new ASTSymbolValue(t);
+   }
+
+   else if(t.isOfType(TokenType::lbracket)) //array value [...]
+   {
+      prev();
+      return expr_arr();
+   }
+
+   else if(t.isOfType(TokenType::lcurlybracket)) //array or set value {...}
+   {
+      prev();
+      return expr_set_map();
    }
 
    else
@@ -395,6 +412,26 @@ AST* Parser::expr_value()
       tokenError(t, "Unexpected token (invalid value)");
       return nullptr;
    }
+}
+
+AST* Parser::expr_set_map()
+{
+   Token t = getToken();
+   if(!t.isOfType(TokenType::lcurlybracket))
+      tokenError(t, "{ expected");
+   next();
+
+   if(isTokenOfType(TokenType::rcurlybracket))
+   {
+      next();
+      return new ASTMap(t, {});
+   }
+
+   AST* first = expr();
+   if(isTokenOfType(TokenType::collon))
+      return expr_map(t, first);
+   else
+      return expr_set(t, first);
 }
 
 std::vector<AST*> Parser::expr_call_list()
@@ -423,4 +460,120 @@ std::vector<AST*> Parser::expr_call_list()
 
    next();
    return v;
+}
+
+
+ASTArray* Parser::expr_arr()
+{
+   //"[" (expr ",")* (expr)? "]"
+
+   std::vector<AST*> v;
+   bool hasComma = false;
+   Token t = getToken();
+
+   if(!t.isOfType(TokenType::lbracket))
+      tokenError(t, "[ expected");
+   next();
+
+   while(true)
+   {
+      Token t = getToken();
+      if(!hasComma && t.isOfType(TokenType::rbracket))
+         break;
+
+      v.push_back(expr());
+
+      if(isTokenOfType(TokenType::comma))
+      {
+         hasComma = true;
+         next();
+      }
+      else
+      {
+         hasComma = false;
+      }
+   }
+
+   next();
+   return new ASTArray(t, v);
+}
+
+
+ASTSet* Parser::expr_set(Token t, AST* first)
+{
+   //"{" (expr ",")* (expr)? "}"
+
+   std::vector<AST*> v;
+   v.push_back(first);
+   bool hasComma = false;
+   bool skip = true;
+
+   while(true)
+   {
+      if(!skip)
+      {
+         Token t = getToken();
+         if(!hasComma && t.isOfType(TokenType::rcurlybracket))
+            break;
+
+         v.push_back(expr());
+      }
+      skip = false;
+
+      if(isTokenOfType(TokenType::comma))
+      {
+         hasComma = true;
+         next();
+      }
+      else
+      {
+         hasComma = false;
+      }
+   }
+
+   next();
+   return new ASTSet(t, v);
+}
+
+
+ASTMap* Parser::expr_map(Token t, AST* first)
+{
+   //"{" (expr ":" expr ,")* (expr ":" expr)? "}"
+
+   std::vector<AST*> v;
+   v.push_back(first);
+   bool hasComma = false;
+   bool skip = true;
+
+   while(true)
+   {
+      if(!skip)
+      {
+         Token t = getToken();
+         if(!hasComma && t.isOfType(TokenType::rcurlybracket))
+            break;
+
+         v.push_back(expr());
+      }
+      skip = false;
+
+      if(!isTokenOfType(TokenType::collon))
+         tokenError(getToken(), ": expected");
+      next();
+
+      v.push_back(expr());
+
+      if(isTokenOfType(TokenType::comma))
+      {
+         hasComma = true;
+         next();
+      }
+      else
+      {
+         hasComma = false;
+      }
+   }
+
+   next();
+   return new ASTMap(t, v);
 }

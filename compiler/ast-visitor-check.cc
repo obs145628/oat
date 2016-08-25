@@ -6,6 +6,8 @@
 #include "logs.hh"
 #include "bin-builder.hh"
 
+#include <iostream>
+
 ASTVisitorCheck::ASTVisitorCheck(ASTState* state, BinBuilder* builder)
    : _state(state), _builder(builder)
 {
@@ -19,6 +21,22 @@ void ASTVisitorCheck::visitChildren()
       ASTVisitorCheck {child, _builder};
 }
 
+void ASTVisitorCheck::checkCollection()
+{
+   t_vm_saddr size = static_cast<t_vm_saddr>(_state->ast()->size());
+   t_vm_saddr arr = _state->frame()->addBlock(size);
+   t_vm_saddr out = _state->frame()->addVar();
+   _state->addVar(out);
+   _state->addVar(arr);
+
+   for(ASTState* child : _state->children())
+   {
+      ASTVisitorCheck {child, _builder};
+      child->frame()->removeVar(child->getVar(0));
+   }
+
+   _state->frame()->removeBlock(arr, size);
+}
 
 void ASTVisitorCheck::checkOpu()
 {
@@ -139,6 +157,37 @@ void ASTVisitorCheck::visit(ASTSymbolValue* e)
    {
       _state->tokenError("Symbol " + name + " is undefined");
    }
+
+   _state->addVar(_state->frame()->addVar());
+}
+
+void ASTVisitorCheck::visit(ASTArray*)
+{
+   checkCollection();
+}
+
+void ASTVisitorCheck::visit(ASTSet*)
+{
+   checkCollection();
+}
+
+void ASTVisitorCheck::visit(ASTMap*)
+{
+   checkCollection();
+}
+
+void ASTVisitorCheck::visit(ASTThis*)
+{
+   ASTState* parent = _state->parent();
+   while(parent && parent->type() != ASTType::class_method)
+      parent = parent->parent();
+
+   if(!parent)
+      _state->tokenError("'this' can only be used inside a class method");
+
+   ASTClassMethod* method = dynamic_cast<ASTClassMethod*> (parent->ast());
+   if(method->isStatic())
+      _state->tokenError("'this' can't be used inside a static class method");
 
    _state->addVar(_state->frame()->addVar());
 }
@@ -379,10 +428,37 @@ void ASTVisitorCheck::visit(ASTOpMember*)
    op->frame()->removeVar(op->getVar(0));
 }
 
-void ASTVisitorCheck::visit(ASTOpNew*)
+void ASTVisitorCheck::visit(ASTOpNew* e)
 {
-   //TODO : implement new operator
-   _state->addVar(_state->frame()->addVar());
+   std::size_t callArgs = e->argsSize();
+   std::string name = e->left()->getName();
+
+   if(LOG_CHECK)
+      std::cout << "check new: " << name << std::endl;
+
+   t_vm_saddr out = _state->frame()->addVar();
+   t_vm_saddr temp = _state->frame()->addVar();
+   _state->addVar(out);
+   _state->addVar(temp);
+
+
+
+
+   if(!SLib::hasClass(name) && !_state->scope()->hasClass(name))
+   {
+      _state->tokenError("new operator requires a class name");
+   }
+
+   for(size_t i = 0; i < callArgs; ++i)
+   {
+      ASTState* arg = _state->getChild(e->getArg(i));
+      ASTVisitorCheck {arg, _builder};
+      _state->addVar(arg->getVar(0));
+   }
+
+   _state->frame()->removeVar(temp);
+   for(size_t i = 0; i < callArgs; ++i)
+      _state->frame()->removeVar(_state->getVar(i + 2));
 }
 
 void ASTVisitorCheck::visit(ASTStatementsBlock*)
@@ -402,15 +478,16 @@ void ASTVisitorCheck::visit(ASTStatementDefine* e)
    ASTState* symbol = _state->getChild(e->getSymbol());
    std::string name = e->getSymbol()->getName();
 
+
+   if(LOG_CHECK)
+      std::cout << "check define: " << name << std::endl;
+
    if(e->hasValue())
    {
       ASTState* value = _state->getChild(e->getValue());
       ASTVisitorCheck{value, _builder};
       _state->addVar(value->getVar(0));
    }
-
-   if(LOG_CHECK)
-      std::cout << "check define: " << name << std::endl;
 
    if(_state->scope()->ownVar(name))
       symbol->tokenError("variable "
@@ -507,4 +584,52 @@ void ASTVisitorCheck::visit(ASTGlobalDef*)
    t_vm_saddr temp = _state->frame()->addVar();
    _state->addVar(temp);
    _state->frame()->removeVar(temp);
+}
+
+void ASTVisitorCheck::visit(ASTClass* e)
+{
+   std::string name = e->getName()->getName();
+   std::string nameLabel = _builder->addSharedString(name);
+   _state->addLabel(nameLabel);
+   visitChildren();
+}
+
+void ASTVisitorCheck::visit(ASTClassMethod* e)
+{
+   ASTStatementsBlock* block = e->getStatement();
+   ASTState* blockState = _state->getChild(block);
+   std::string name = e->getName()->getName();
+   std::string label = _builder->getUniqueLabel(name + "_method_");
+   std::string nameLabel = _builder->addSharedString(name);
+
+   if(LOG_CHECK)
+      std::cout << "check mthod_def:" << name << std::endl;
+
+   blockState->frame()->addVar(); //this variable
+
+   for(size_t i = 0; i < e->argsSize(); ++i)
+   {
+      ASTSymbol* arg = e->getArg(i);
+      blockState->scope()->defineVar(arg->getName(), DVAR_TNOT, DVAR_MVAR);
+   }
+
+   _state->addLabel(nameLabel);
+   _state->addLabel(label);
+   visitChildren();
+
+   t_vm_saddr temp = _state->frame()->addVar();
+   _state->addVar(temp);
+   _state->frame()->removeVar(temp);
+}
+
+void ASTVisitorCheck::visit(ASTClassVariable* e)
+{
+   visitChildren();
+   t_vm_saddr temp = _state->frame()->addVar();
+   _state->addVar(temp);
+   _state->frame()->removeVar(temp);
+
+   std::string name = e->getSymbol()->getName();
+   std::string nameLabel = _builder->addSharedString(name);
+   _state->addLabel(nameLabel);
 }

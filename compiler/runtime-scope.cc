@@ -4,11 +4,13 @@
 #include "ast-functions.hh"
 #include "ast-modules.hh"
 #include "ast-values.hh"
+#include "ast-class.hh"
 #include "../vm/dvar.h"
 
 RuntimeScope::RuntimeScope(Scanner* scanner, StackFrame* frame,
                            RuntimeScope* parent)
-   : _scanner(scanner), _frame(frame), _parent(parent)
+   : _nextClassId(SLib::getNbClasses()),
+   _scanner(scanner), _frame(frame), _parent(parent)
 {
 
 }
@@ -178,5 +180,58 @@ void RuntimeScope::defineGlobal(ASTGlobalDef* g,
 
 bool RuntimeScope::hasGlobalSymbol(const std::string& name)
 {
-   return hasFunction(name) || hasGlobal(name) || SLib::hasFunction(name);
+   return hasFunction(name) || hasGlobal(name) || hasClass(name)
+      || SLib::hasFunction(name) || SLib::hasClass(name);
+}
+
+bool RuntimeScope::hasClass(const std::string& name)
+{
+   RuntimeScope* root = getRoot();
+   auto it = root->_classes.find(name);
+   if(it == root->_classes.end())
+      return false;
+
+   std::vector<RuntimeClass>& classes = it->second;
+   for(RuntimeClass c: classes)
+      if(c.ast->isExported() || c.ast->getToken().getScanner() == _scanner)
+         return true;
+
+   return false;
+}
+
+RuntimeClass RuntimeScope::getClass(const std::string& name)
+{
+   assert(hasClass(name));
+   RuntimeScope* root = getRoot();
+   auto it = root->_classes.find(name);
+
+   std::vector<RuntimeClass>& classes = it->second;
+   for(RuntimeClass c: classes)
+      if(c.ast->isExported() || c.ast->getToken().getScanner() == _scanner)
+         return c;
+
+   //never happens
+   throw std::runtime_error{"RuntimeScope::getClass"};
+}
+
+void RuntimeScope::defineClass(const std::string& name, ASTClass* ast)
+{
+   assert(!hasGlobalSymbol(name));
+   RuntimeScope* root = getRoot();
+
+   RuntimeClass c;
+   c.ast = ast;
+   c.id = root->_nextClassId++;
+
+   auto it = root->_classes.find(name);
+
+   if(it == root->_classes.end())
+   {
+      root->_classes[name] = {c};
+   }
+
+   else
+   {
+      it->second.push_back(c);
+   }
 }

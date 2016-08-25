@@ -210,7 +210,10 @@ const std::map<TokenType, std::string> Token::TYPES_NAMES = {
    {TokenType::kw_const, "kw_const"},
    {TokenType::kw_let, "kw_let"},
    {TokenType::kw_export, "kw_export"},
-   {TokenType::kw_import, "kw_import"}
+   {TokenType::kw_import, "kw_import"},
+   {TokenType::kw_class, "kw_class"},
+   {TokenType::kw_static, "kw_static"},
+   {TokenType::kw_this, "kw_this"}
 };
 
 const std::map<std::string, TokenType> Token::TYPES_LOOKUP = {
@@ -275,6 +278,9 @@ const std::map<std::string, TokenType> Token::TYPES_LOOKUP = {
    {"let", TokenType::kw_let},
    {"export", TokenType::kw_export},
    {"import", TokenType::kw_import},
+   {"class", TokenType::kw_class},
+   {"static", TokenType::kw_static},
+   {"this", TokenType::kw_this},
 
 
    {"int", TokenType::reserved},
@@ -283,15 +289,12 @@ const std::map<std::string, TokenType> Token::TYPES_LOOKUP = {
    {"bool", TokenType::reserved},
    {"string", TokenType::reserved},
    {"function", TokenType::reserved},
-   {"class", TokenType::reserved},
    {"interface", TokenType::reserved},
    {"struct", TokenType::reserved},
    {"enum", TokenType::reserved},
-   {"static", TokenType::reserved},
    {"public", TokenType::reserved},
    {"private", TokenType::reserved},
    {"protected", TokenType::reserved},
-   {"this", TokenType::reserved},
    {"friend", TokenType::reserved},
    {"override", TokenType::reserved},
    {"import", TokenType::reserved},

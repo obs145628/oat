@@ -74,7 +74,7 @@ t_phtablev phtable_get(s_phtable* s, t_phtablek key)
 
 int phtable_insert(s_phtable* s, t_phtablek key, t_phtablev value)
 {
-   size_t hash = s->hash(key) % s->size;
+   uint32_t hash = s->hash(key) % s->size;
    s_phtable_node* head = s->table[hash];
    s_phtable_node* node = head;
 
@@ -97,7 +97,7 @@ int phtable_insert(s_phtable* s, t_phtablek key, t_phtablev value)
 
 void phtable_set(s_phtable* s, t_phtablek key, t_phtablev value)
 {
-   size_t hash = s->hash(key) % s->size;
+   uint32_t hash = s->hash(key) % s->size;
    s_phtable_node* head = s->table[hash];
    s_phtable_node* node = head;
 
@@ -138,7 +138,7 @@ void phtable_clear(s_phtable* s)
 
 int phtable_remove(s_phtable* s, t_phtablek key)
 {
-   size_t hash = s->hash(key) % s->size;
+   uint32_t hash = s->hash(key) % s->size;
    s_phtable_node** pnode = s->table + hash;
 
    while(*pnode)
@@ -151,8 +151,10 @@ int phtable_remove(s_phtable* s, t_phtablek key)
          free(node);
          return 1;
       }
+      pnode = &(node->next);
    }
 
+   assert(phtable_find(s, key));
    return 0;
 }
 

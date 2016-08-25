@@ -2,20 +2,21 @@
 # define PHTABLE_H_
 
 # include <stddef.h>
+# include <stdint.h>
 
 # define PHTABLE_END (0)
 
 typedef void* t_phtablek;
 typedef void* t_phtablev;
 typedef int (*f_phtable_cmp)(t_phtablek a, t_phtablek b);
-typedef size_t (*f_phtable_hash)(t_phtablek key);
+typedef uint32_t (*f_phtable_hash)(t_phtablek key);
 typedef void (*f_phtable_foreach)(t_phtablek key, t_phtablev value);
 typedef int (*f_phtable_pred)(t_phtablek key, t_phtablev value);
 
 
 struct phtablenode
 {
-        size_t hash;
+        uint32_t hash;
         t_phtablek key;
         t_phtablev value;
         struct phtablenode* next;

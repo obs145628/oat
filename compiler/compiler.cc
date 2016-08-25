@@ -2,6 +2,7 @@
 #include <cassert>
 #include "ast-visitor-precheck.hh"
 #include "ast-visitor-check.hh"
+#include "ast-visitor-compile-static.hh"
 #include "ast-visitor-compile.hh"
 #include "ast-state.hh"
 #include "runtime-scope.hh"
@@ -43,6 +44,7 @@ void Compiler::check()
 
 void Compiler::compile()
 {
+   ASTVisitorCompileStatic {_state, &_builder};
    ASTVisitorCompile {_state, &_builder};
 }
 

@@ -87,6 +87,30 @@ void ASTVisitorInfos::visit(ASTSymbolValue* e)
    _infos.desc = "val_symbol_val: " + e->getName();
 }
 
+void ASTVisitorInfos::visit(ASTArray*)
+{
+   _infos.type = ASTType::val_array;
+   _infos.desc = "val_array";
+}
+
+void ASTVisitorInfos::visit(ASTSet*)
+{
+   _infos.type = ASTType::val_set;
+   _infos.desc = "val_set";
+}
+
+void ASTVisitorInfos::visit(ASTMap*)
+{
+   _infos.type = ASTType::val_map;
+   _infos.desc = "val_map";
+}
+
+void ASTVisitorInfos::visit(ASTThis*)
+{
+   _infos.type = ASTType::val_this;
+   _infos.desc = "val_this";
+}
+
 void ASTVisitorInfos::visit(ASTOp1Plus*)
 {
    _infos.type = ASTType::op1_plus;
@@ -422,4 +446,24 @@ void ASTVisitorInfos::visit(ASTGlobalDef* e)
    _infos.desc = "global_def";
    if(e->isExported())
       _infos.desc += " (exported)";
+}
+
+void ASTVisitorInfos::visit(ASTClass* e)
+{
+   _infos.type = ASTType::class_def;
+   _infos.desc = "class_def";
+   if(e->isExported())
+      _infos.desc += " (exported)";
+}
+
+void ASTVisitorInfos::visit(ASTClassMethod*)
+{
+   _infos.type = ASTType::class_method;
+   _infos.desc = "class_method";
+}
+
+void ASTVisitorInfos::visit(ASTClassVariable*)
+{
+   _infos.type = ASTType::class_variable;
+   _infos.desc = "class_variable";
 }

@@ -2,6 +2,7 @@
 #include "ast-modules.hh"
 #include "ast-functions.hh"
 #include "ast-values.hh"
+#include "ast-class.hh"
 #include "str.hh"
 #include "scanner.hh"
 
@@ -25,6 +26,8 @@ void Parser::component(std::vector<AST*>& children)
       children.push_back(global_def());
    else if(t.isOfType(TokenType::kw_import))
       import_def(children);
+   else if(t.isOfType(TokenType::kw_class))
+      children.push_back(class_def());
    else
       children.push_back(function_def());
 }

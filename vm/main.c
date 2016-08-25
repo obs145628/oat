@@ -8,11 +8,42 @@
 #include "vm-bin.h"
 #include "vm-debug.h"
 #include "vm-exec.h"
+#include "vm-classes.h"
+
+#include "dvar-arr.h"
+#include "dvar-str.h"
+#include "dvar-set.h"
+#include "dvar-map.h"
+#include "vm-syscall.h"
+#include "dvar-class.h"
+
+#include "numbers.h"
 
 # define BIN "/home/obs/it/oat/tests/main.oatbin"
 
+int fact(int n)
+{
+   return n <= 1 ? 1 : n * fact(n - 1);
+}
+
+void init_int(dvar* v, t_vm_int x)
+{
+   dvar_init_int(v, DVAR_MVAR, x);
+}
+
+void init_str(dvar* v, const char* x)
+{
+   dvar_init_str(v, DVAR_MVAR, x, strlen(x));
+}
+
+void member(const dvar* v, const char* str, dvar* res)
+{
+   dvar_member(v, str, strlen(str), res);
+}
+
 int main()
 {
+
    /*
    s_bin_builder* b = bin_builder_new();
    bin_builder_add_string(b, "str1", "toString");
@@ -39,30 +70,15 @@ int main()
 
    bin_builder_addi_nop(b, "_main");
 
-   bin_builder_addi_putstring(b, NULL, 0, 1, "str1", 8);
-   bin_builder_addi_putstring(b, NULL, 1, 1, "str2", 3);
-   bin_builder_addi_putref(b, NULL, 3, 0);
-   bin_builder_addi_pluseq(b, NULL, 3, 1, 4);
-   bin_builder_addi_bplus(b, NULL, 0, 1, 2);
-   bin_builder_addi_copy(b, NULL, 1, 0);
-   bin_builder_addi_move(b, NULL, 2, 0);
-
-   bin_builder_addi_member(b, NULL, 0, "str1", 8, 1);
-   bin_builder_addi_fcall(b, NULL, 1, 5, 0);
-
-
-   bin_builder_addi_fcall(b, NULL, 1, 5, 1);
-   bin_builder_addi_syscall(b, NULL, 1);
-
-   bin_builder_addi_syscall(b, NULL, 0);
-
 
 
    bin_builder_save(b, BIN);
    bin_builder_free(b);
-
    */
 
+
+
+   vm_classes_init();
    vm_bin_load_file(BIN);
    vm_exec_init();
    //vm_debug_print_code();

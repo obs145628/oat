@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "dvar.h"
+#include "dvar-arr.h"
 #include "str.h"
+#include "hash.h"
+#include "err.h"
 
 # define ALLOC_SIZE_ 8
 
@@ -86,16 +89,45 @@ t_vm_bool dvar_fun_equals(const dvar_fun* a, const dvar_fun* b)
    return TRUE;
 }
 
-t_vm_bool dvar_fun_to_bool_(const dvar_fun* f)
+t_vm_bool dvar_fun_to_bool(const dvar_fun* f)
 {
    (void) f;
    return TRUE;
 }
 
-char* dvar_fun_to_string_(const dvar_fun* f)
+char* dvar_fun_to_string(const dvar_fun* f)
 {
    if(f->syscall == VM_SYSCALL_NO)
       return strClone("user function");
    else
       return strClone("native function");
+}
+
+uint32_t dvar_fun_to_hash(const dvar_fun* f)
+{
+   if(f->syscall == VM_SYSCALL_NO)
+      return hash_int((uint32_t) f->addr);
+   else
+      return hash_int((uint32_t) f->syscall);
+}
+
+
+struct dvar* c__fun__bind(struct dvar* l, t_vm_int n)
+{
+   dvar_fun_bind(l->v_fun, l + 1, l + n);
+   return l;
+}
+
+struct dvar* c__fun__binda(struct dvar* l, t_vm_int n)
+{
+   if(n == 1)
+      err("function.binda: too few arguments");
+
+   struct dvar* arr = l+1;
+   if(arr->type != DVAR_TARR)
+      err("function.binda: first argument must be an array");
+
+   dvar_fun_bind(l->v_fun, arr->v_arr->elems,
+                 arr->v_arr->elems + arr->v_arr->len);
+   return l;
 }

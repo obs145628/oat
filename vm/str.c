@@ -17,6 +17,14 @@ char* strClone(const char* s)
    return clone;
 }
 
+char* strCloneN(const char* s, size_t len)
+{
+   char* res = malloc(len + 1);
+   memcpy(res, s, len);
+   res[len] = '\0';
+   return res;
+}
+
 char* strFormat(const char* format, ...)
 {
    va_list args;

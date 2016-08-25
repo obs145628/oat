@@ -1,12 +1,9 @@
 import "maths.oat";
-
-println(x)
-{
-  print(x, "\n");
-}
+import "utils.oat";
+import "Vector.oat";
 
 main()
 {
-  for(let i = 0; i < 10; ++i)
-    println(fact(i));
+    let t = Date.now();
+    println(t);
 }

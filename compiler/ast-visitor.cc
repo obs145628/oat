@@ -54,6 +54,26 @@ void ASTVisitor::visit(ASTSymbolValue* e)
    visitDefault(e);
 }
 
+void ASTVisitor::visit(ASTArray* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTSet* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTMap* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTThis* e)
+{
+   visitDefault(e);
+}
+
 void ASTVisitor::visit(ASTOp1Plus* e)
 {
    visitDefault(e);
@@ -325,6 +345,22 @@ void ASTVisitor::visit(ASTFunctionDef* e)
 }
 
 void ASTVisitor::visit(ASTGlobalDef* e)
+{
+   visitDefault(e);
+}
+
+
+void ASTVisitor::visit(ASTClass* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTClassMethod* e)
+{
+   visitDefault(e);
+}
+
+void ASTVisitor::visit(ASTClassVariable* e)
 {
    visitDefault(e);
 }

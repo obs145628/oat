@@ -5,6 +5,8 @@
 #include "slib.hh"
 #include "logs.hh"
 #include "../vm/dvar.h"
+#include <cassert>
+#include <iostream>
 
 ASTVisitorCompile::ASTVisitorCompile(ASTState* state, BinBuilder* builder)
    : _state(state), _builder(builder)
@@ -18,6 +20,24 @@ void ASTVisitorCompile::visitChildren()
    {
       ASTVisitorCompile {child, _builder};
    }
+}
+
+void ASTVisitorCompile::compileCollection(t_vm_ins code)
+{
+   t_vm_saddr out = _state->getVar(0);
+   t_vm_saddr arr = _state->getVar(1);
+   t_vm_saddr size = static_cast<t_vm_saddr> (_state->ast()->size());
+
+   for(t_vm_saddr i = 0; i < size; ++i)
+   {
+      ASTState* child = _state->child(i);
+      t_vm_saddr childOut = child->getVar(0);
+      ASTVisitorCompile {child, _builder};
+      _builder->addiMove(arr + i, childOut);
+   }
+
+   _builder->addia4(code, _builder->aSadddr(out), _builder->aInt(DVAR_MVAR),
+                    _builder->aSadddr(arr), _builder->aInt(size));
 }
 
 
@@ -75,6 +95,17 @@ ASTState* ASTVisitorCompile::getParentLoop()
    return parent;
 }
 
+std::string ASTVisitorCompile::getClassName() const
+{
+   assert(_state->parent()->type() == ASTType::class_def);
+   ASTClass* c = dynamic_cast<ASTClass*> (_state->parent()->ast());
+   return c->getName()->getName();
+}
+
+t_vm_int ASTVisitorCompile::getClassId() const
+{
+   return _state->scope()->getClass(getClassName()).id;
+}
 
 
 
@@ -160,11 +191,44 @@ void ASTVisitorCompile::visit(ASTSymbolValue* e)
       _builder->addiPutsyscall(dst, DVAR_MVAR, syscall);
    }
 
+   else if(_state->scope()->hasClass(name))
+   {
+      t_vm_int id = _state->scope()->getClass(name).id;
+      _builder->addiPutclass(dst, DVAR_MVAR, id);
+   }
+
+   else if(SLib::hasClass(name))
+   {
+      t_vm_int id = SLib::getClass(name);
+      _builder->addiPutclass(dst, DVAR_MVAR, id);
+   }
+
    else
    {
       //should never happen
       _state->tokenError("Unknown symbol_value type");
    }
+}
+
+void ASTVisitorCompile::visit(ASTArray*)
+{
+   compileCollection(VM_INS_PUTARR);
+}
+
+void ASTVisitorCompile::visit(ASTSet*)
+{
+   compileCollection(VM_INS_PUTSET);
+}
+
+void ASTVisitorCompile::visit(ASTMap*)
+{
+   compileCollection(VM_INS_PUTMAP);
+}
+
+void ASTVisitorCompile::visit(ASTThis*)
+{
+   t_vm_saddr dst = _state->getVar(0);
+   _builder->addiCopy(dst, 0);
 }
 
 void ASTVisitorCompile::visit(ASTOp1Plus*)
@@ -466,10 +530,39 @@ void ASTVisitorCompile::visit(ASTOpMember* e)
    _builder->addiMember(op, label, len, dst);
 }
 
-void ASTVisitorCompile::visit(ASTOpNew*)
+void ASTVisitorCompile::visit(ASTOpNew* e)
 {
-   //TODO: implement new operator
-   _builder->addiPutnull(_state->getVar(0), DVAR_MVAR);
+   t_vm_saddr stackSize = _state->frame()->getSize();
+   t_vm_saddr out = _state->getVar(0);
+   t_vm_saddr temp = _state->getVar(1);
+   std::string name = e->left()->getName();
+   std::string constructorLabel = _builder->addSharedString("constructor");
+
+   t_vm_int id;
+   if(_state->scope()->hasClass(name))
+      id = _state->scope()->getClass(name).id;
+   else
+      id = SLib::getClass(name);
+
+
+   for(size_t i = 0; i < e->argsSize(); ++i)
+   {
+      ASTState* arg = _state->getChild(e->getArg(i));
+      ASTVisitorCompile {arg, _builder};
+   }
+
+   for(size_t i = 0; i < e->argsSize(); ++i)
+   {
+      t_vm_saddr argIn = _state->getVar(i + 2);
+      t_vm_saddr argOut = stackSize + static_cast<t_vm_saddr> (i);
+      _builder->addiMove(argOut, argIn);
+   }
+
+   _builder->addiPutobj(out, DVAR_MVAR, id);
+   _builder->addiMember(out, constructorLabel, 11, temp);
+
+   t_vm_int nbArgs = static_cast<t_vm_int> (e->argsSize());
+   _builder->addiFcall(temp, stackSize, nbArgs);
 }
 
 
@@ -635,38 +728,7 @@ void ASTVisitorCompile::visit(ASTStatementContinue*)
 
 void ASTVisitorCompile::visit(ASTModule*)
 {
-   ASTState* main = _state->getChild(_state->scope()->getFunction("main"));
-   std::string mainLabel = main->getLabel(0);
-
-   if(LOG_COMPILE)
-      std::cout << "compile: create internal _main function" << std::endl;
-
-   _builder->addiNop("_main");
-
-   for(ASTState* child: _state->children())
-   {
-      if(child->type() == ASTType::global_def)
-         ASTVisitorCompile {child, _builder};
-   }
-
-   t_vm_saddr scopeSize = _state->frame()->getSize();
-   t_vm_saddr temp1 = _state->getVar(0);
-   t_vm_saddr temp2 = _state->getVar(1);
-
-   _builder->addiFjump(mainLabel, scopeSize);
-   _builder->addiPutnull(temp1, DVAR_MVAR);
-   _builder->addiNeq(scopeSize, temp1, temp2);
-   _builder->addiCjump(temp2, "_main_end");
-   _builder->addiPutint(scopeSize, DVAR_MVAR, 0);
-   _builder->addiNop("_main_end");
-   _builder->addiMove(0, scopeSize);
-   _builder->addiSyscall(VM_SYSCALL_EXIT);
-
-   for(ASTState* child: _state->children())
-   {
-      if(child->type() == ASTType::function_def)
-         ASTVisitorCompile {child, _builder};
-   }
+   visitChildren();
 
    if(LOG_COMPILE)
       std::cout << "compile: done !" << std::endl;
@@ -691,33 +753,36 @@ void ASTVisitorCompile::visit(ASTFunctionDef* e)
    _builder->addiFret();
 }
 
-void ASTVisitorCompile::visit(ASTGlobalDef* e)
+void ASTVisitorCompile::visit(ASTGlobalDef*)
 {
-   std::string name = e->getSymbol()->getName();
-   GlobalVar g = _state->scope()->getGlobal(name);
-   t_vm_mode mode = g.mode;
-   std::string label = g.label;
 
-   t_vm_saddr temp = _state->getVar(0);
+}
+
+void ASTVisitorCompile::visit(ASTClass*)
+{
+   visitChildren();
+}
+
+void ASTVisitorCompile::visit(ASTClassMethod* e)
+{
+   std::string name = e->getName()->getName();
+   std::string label = _state->getLabel(1);
+   ASTState* block = _state->getChild(e->getStatement());
+   t_vm_saddr stackSize = _state->frame()->getSize();
+
 
    if(LOG_COMPILE)
-      std::cout << "compile: global variable " + name << std::endl;
+      std::cout << "compile: method " + name << std::endl;
 
-   _builder->addVar(label);
+   _builder->addiNop(label);
 
-   if(e->hasValue())
-   {
-      ASTState* value = _state->getChild(e->getValue());
-      ASTVisitorCompile {value, _builder};
-      t_vm_saddr result = value->getVar(0);
-      _builder->addiPutvar(temp, mode, result);
-   }
+   ASTVisitorCompile {block, _builder};
 
-   else
-   {
-      _builder->addiPutnull(temp, mode);
-   }
+   _builder->addiBclear(0, stackSize);
+   _builder->addiFret();
+}
 
-;
-   _builder->addiInit(temp, label);
+void ASTVisitorCompile::visit(ASTClassVariable*)
+{
+
 }

@@ -15,6 +15,10 @@ enum class ASTType
       val_null,
       val_symbol,
       val_symbol_val,
+      val_array,
+      val_set,
+      val_map,
+      val_this,
       op1_plus,
       op1_minus,
       op2_plus,
@@ -69,7 +73,10 @@ enum class ASTType
       statement_continue,
       module,
       function_def,
-      global_def
+      global_def,
+      class_def,
+      class_method,
+      class_variable
 };
 
 struct ASTInfos
@@ -100,6 +107,10 @@ public:
    virtual void visit(ASTNull* e) override;
    virtual void visit(ASTSymbol* e) override;
    virtual void visit(ASTSymbolValue* e) override;
+   virtual void visit(ASTArray* e) override;
+   virtual void visit(ASTSet* e) override;
+   virtual void visit(ASTMap* e) override;
+   virtual void visit(ASTThis* e) override;
 
    virtual void visit(ASTOp1Plus* e) override;
    virtual void visit(ASTOp1Minus* e) override;
@@ -158,6 +169,10 @@ public:
    virtual void visit(ASTModule* e) override;
    virtual void visit(ASTFunctionDef* e) override;
    virtual void visit(ASTGlobalDef* e) override;
+
+   virtual void visit(ASTClass* e) override;
+   virtual void visit(ASTClassMethod* e) override;
+   virtual void visit(ASTClassVariable* e) override;
 
 private:
    ASTInfos _infos;

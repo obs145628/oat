@@ -11,7 +11,10 @@ public:
 
    t_vm_saddr addVar();
 
+   t_vm_saddr addBlock(t_vm_saddr size);
+
    void removeVar(t_vm_saddr addr);
+   void removeBlock(t_vm_saddr addr, t_vm_saddr n);
 
    t_vm_saddr getSize() const;
 

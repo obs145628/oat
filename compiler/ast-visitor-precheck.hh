@@ -16,6 +16,7 @@ public:
    virtual void visit(ASTModule* e) override;
    virtual void visit(ASTFunctionDef* e) override;
    virtual void visit(ASTGlobalDef* e) override;
+   virtual void visit(ASTClass* e) override;
 
 private:
    ASTState* _state;

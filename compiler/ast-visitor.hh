@@ -6,6 +6,7 @@
 # include "ast-statements.hh"
 # include "ast-functions.hh"
 # include "ast-modules.hh"
+# include "ast-class.hh"
 
 class ASTVisitor
 {
@@ -21,6 +22,10 @@ public:
    virtual void visit(ASTNull* e);
    virtual void visit(ASTSymbol* e);
    virtual void visit(ASTSymbolValue* e);
+   virtual void visit(ASTArray* e);
+   virtual void visit(ASTSet* e);
+   virtual void visit(ASTMap* e);
+   virtual void visit(ASTThis* e);
 
    virtual void visit(ASTOp1Plus* e);
    virtual void visit(ASTOp1Minus* e);
@@ -79,6 +84,10 @@ public:
    virtual void visit(ASTModule* e);
    virtual void visit(ASTFunctionDef* e);
    virtual void visit(ASTGlobalDef* e);
+
+   virtual void visit(ASTClass* e);
+   virtual void visit(ASTClassMethod* e);
+   virtual void visit(ASTClassVariable* e);
 
 private:
 

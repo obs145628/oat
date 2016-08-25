@@ -64,6 +64,16 @@ public:
                       const std::string& addrLabel);
    void addiPutsyscall(t_vm_saddr saddr, t_vm_int mode,
                       t_vm_int syscall);
+   void addiPutarr(t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr it, t_vm_int size);
+   void addiPutset(t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr it, t_vm_int size);
+   void addiPutmap(t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr it, t_vm_int size);
+   void addiPutobj(t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_int id);
+   void addiPutclass(t_vm_saddr saddr, t_vm_int mode,
+                     t_vm_int id);
    void addiPutvar(t_vm_saddr saddr, t_vm_int mode,
                    t_vm_saddr src);
    void addiPutref(t_vm_saddr dst, t_vm_saddr src);
@@ -118,6 +128,15 @@ public:
                      t_vm_saddr a4);
    void addiMember(t_vm_saddr saddr, const std::string& strLabel,
                    t_vm_int size, t_vm_saddr res);
+   void addiDefclass(const std::string& nameLabel, t_vm_int len,
+                     t_vm_int id);
+   void addiDeffield(t_vm_int id, const std::string& nameLabel,
+                     t_vm_int len, t_vm_int type,
+                     t_vm_saddr value);
+   void addiDefsfield(t_vm_int id, const std::string& nameLabel,
+                      t_vm_int len, t_vm_int type,
+                      t_vm_saddr value);
+   void addiDefend(t_vm_int id);
 
    void addiNop(const std::string& label);
    void addiJump(const std::string& label, const std::string& addrLabel);
@@ -148,6 +167,16 @@ public:
    void addiPutsyscall(const std::string& label,
                        t_vm_saddr saddr, t_vm_int mode,
                       t_vm_int syscall);
+   void addiPutarr(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr it, t_vm_int size);
+   void addiPutset(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr it, t_vm_int size);
+   void addiPutmap(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr it, t_vm_int size);
+   void addiPutobj(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_int id);
+   void addiPutclass(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
+                     t_vm_int id);
    void addiPutvar(const std::string& label, t_vm_saddr saddr, t_vm_int mode,
                    t_vm_saddr src);
    void addiPutref(const std::string& label, t_vm_saddr dst, t_vm_saddr src);
@@ -238,6 +267,19 @@ public:
    void addiMember(const std::string& label,
                    t_vm_saddr saddr, const std::string& strLabel,
                    t_vm_int size, t_vm_saddr res);
+   void addiDefclass(const std::string& label,
+                     const std::string& nameLabel, t_vm_int len,
+                     t_vm_int id);
+   void addiDeffield(const std::string& label,
+                     t_vm_int id, const std::string& nameLabel,
+                     t_vm_int len, t_vm_int type,
+                     t_vm_saddr value);
+   void addiDefsfield(const std::string& label,
+                      t_vm_int id, const std::string& nameLabel,
+                      t_vm_int len, t_vm_int type,
+                      t_vm_saddr value);
+   void addiDefend(const std::string& label,
+                   t_vm_int id);
 
 
    void addia0(t_vm_ins code);

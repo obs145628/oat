@@ -8,6 +8,7 @@
 
 class ASTFunctionDef;
 class ASTGlobalDef;
+class ASTClass;
 class Scanner;
 
 struct RuntimeVar
@@ -24,6 +25,12 @@ struct GlobalVar
    bool initialized;
    std::string label;
    ASTGlobalDef* ast;
+};
+
+struct RuntimeClass
+{
+   t_vm_int id;
+   ASTClass* ast;
 };
 
 class RuntimeScope
@@ -55,14 +62,20 @@ public:
    void defineGlobal(ASTGlobalDef* g, const std::string& label,
                      t_vm_type type);
 
+   bool hasClass(const std::string& name);
+   RuntimeClass getClass(const std::string& name);
+   void defineClass(const std::string& name, ASTClass* ast);
+
    bool hasGlobalSymbol(const std::string& name);
 
 
 
 private:
+   t_vm_int _nextClassId;
    std::map<std::string, RuntimeVar> _vars;
    std::map<std::string, std::vector<ASTFunctionDef*>> _fns;
    std::map<std::string, std::vector<GlobalVar>> _globals;
+   std::map<std::string, std::vector<RuntimeClass>> _classes;
    Scanner* _scanner;
    StackFrame* _frame;
    RuntimeScope* _parent;

@@ -22,6 +22,10 @@ public:
    virtual void visit(ASTNull* e) override;
    virtual void visit(ASTSymbol* e) override;
    virtual void visit(ASTSymbolValue* e) override;
+   virtual void visit(ASTArray* e) override;
+   virtual void visit(ASTSet* e) override;
+   virtual void visit(ASTMap* e) override;
+   virtual void visit(ASTThis* e) override;
 
    virtual void visit(ASTOp1Plus* e) override;
    virtual void visit(ASTOp1Minus* e) override;
@@ -81,11 +85,17 @@ public:
    virtual void visit(ASTFunctionDef* e) override;
    virtual void visit(ASTGlobalDef* e) override;
 
+   virtual void visit(ASTClass* e) override;
+   virtual void visit(ASTClassMethod* e) override;
+   virtual void visit(ASTClassVariable* e) override;
+
 private:
    ASTState* _state;
    BinBuilder* _builder;
 
    void visitChildren();
+
+   void checkCollection();
 
    void checkOpu();
    void checkOpb();

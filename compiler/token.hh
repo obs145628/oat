@@ -81,7 +81,10 @@ enum class TokenType
       kw_const,
       kw_let,
       kw_export,
-      kw_import
+      kw_import,
+      kw_class,
+      kw_static,
+      kw_this
 };
 
 class Token

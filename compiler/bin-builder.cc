@@ -251,6 +251,36 @@ void BinBuilder::addiPutsyscall(t_vm_saddr saddr, t_vm_int mode,
    bin_builder_addi_putsyscall(_builder, 0, saddr, mode, syscall);
 }
 
+void BinBuilder::addiPutarr(t_vm_saddr saddr, t_vm_int mode,
+                            t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addi_putarr(_builder, 0, saddr, mode, it, size);
+}
+
+void BinBuilder::addiPutset(t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addi_putset(_builder, 0, saddr, mode, it, size);
+}
+
+void BinBuilder::addiPutmap(t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addi_putmap(_builder, 0, saddr, mode, it, size);
+}
+
+void BinBuilder::addiPutobj(t_vm_saddr saddr, t_vm_int mode,
+                   t_vm_int id)
+{
+   bin_builder_addi_putobj(_builder, 0, saddr, mode, id);
+}
+
+void BinBuilder::addiPutclass(t_vm_saddr saddr, t_vm_int mode,
+                     t_vm_int id)
+{
+   bin_builder_addi_putclass(_builder, 0, saddr, mode, id);
+}
+
 void BinBuilder::addiPutvar(t_vm_saddr saddr, t_vm_int mode,
                             t_vm_saddr src)
 {
@@ -508,6 +538,33 @@ void BinBuilder::addiMember(t_vm_saddr saddr, const std::string& strLabel,
    bin_builder_addi_member(_builder, 0, saddr, getLabel(strLabel), size, res);
 }
 
+void BinBuilder::addiDefclass(const std::string& nameLabel, t_vm_int len,
+                              t_vm_int id)
+{
+   bin_builder_addi_defclass(_builder, 0, getLabel(nameLabel), len, id);
+}
+
+void BinBuilder::addiDeffield(t_vm_int id, const std::string& nameLabel,
+                              t_vm_int len, t_vm_int type,
+                              t_vm_saddr value)
+{
+   bin_builder_addi_deffield(_builder, 0, id, getLabel(nameLabel), len,
+                             type, value);
+}
+
+void BinBuilder::addiDefsfield(t_vm_int id, const std::string& nameLabel,
+                               t_vm_int len, t_vm_int type,
+                               t_vm_saddr value)
+{
+   bin_builder_addi_defsfield(_builder, 0, id, getLabel(nameLabel), len,
+                              type, value);
+}
+
+void BinBuilder::addiDefend(t_vm_int id)
+{
+   bin_builder_addi_defend(_builder, 0, id);
+}
+
 
 
 
@@ -604,6 +661,41 @@ void BinBuilder::addiPutsyscall(const std::string& label,
                                 t_vm_int syscall)
 {
    bin_builder_addi_putsyscall(_builder, getLabel(label), saddr, mode, syscall);
+}
+
+void BinBuilder::addiPutarr(const std::string& label,
+                            t_vm_saddr saddr, t_vm_int mode,
+                            t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addi_putarr(_builder, getLabel(label), saddr, mode, it, size);
+}
+
+void BinBuilder::addiPutset(const std::string& label,
+                            t_vm_saddr saddr, t_vm_int mode,
+                            t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addi_putset(_builder, getLabel(label), saddr, mode, it, size);
+}
+
+void BinBuilder::addiPutmap(const std::string& label,
+                            t_vm_saddr saddr, t_vm_int mode,
+                            t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addi_putmap(_builder, getLabel(label), saddr, mode, it, size);
+}
+
+void BinBuilder::addiPutobj(const std::string& label,
+                            t_vm_saddr saddr, t_vm_int mode,
+                            t_vm_int id)
+{
+   bin_builder_addi_putobj(_builder, getLabel(label), saddr, mode, id);
+}
+
+void BinBuilder::addiPutclass(const std::string& label,
+                              t_vm_saddr saddr, t_vm_int mode,
+                              t_vm_int id)
+{
+   bin_builder_addi_putclass(_builder, getLabel(label), saddr, mode, id);
 }
 
 void BinBuilder::addiPutvar(const std::string& label,
@@ -913,6 +1005,38 @@ void BinBuilder::addiMember(const std::string& label,
 {
    bin_builder_addi_member(_builder, getLabel(label),
                            saddr, getLabel(strLabel), size, res);
+}
+
+void BinBuilder::addiDefclass(const std::string& label,
+                              const std::string& nameLabel, t_vm_int len,
+                              t_vm_int id)
+{
+   bin_builder_addi_defclass(_builder, getLabel(label),
+                             getLabel(nameLabel), len, id);
+}
+
+void BinBuilder::addiDeffield(const std::string& label,
+                              t_vm_int id, const std::string& nameLabel,
+                              t_vm_int len, t_vm_int type,
+                              t_vm_saddr value)
+{
+   bin_builder_addi_deffield(_builder, getLabel(label),
+                             id, getLabel(nameLabel), len, type, value);
+}
+
+void BinBuilder::addiDefsfield(const std::string& label,
+                               t_vm_int id, const std::string& nameLabel,
+                               t_vm_int len, t_vm_int type,
+                               t_vm_saddr value)
+{
+   bin_builder_addi_defsfield(_builder, getLabel(label),
+                              id, getLabel(nameLabel), len, type, value);
+}
+
+void BinBuilder::addiDefend(const std::string& label,
+                            t_vm_int id)
+{
+   bin_builder_addi_defend(_builder, getLabel(label), id);
 }
 
 

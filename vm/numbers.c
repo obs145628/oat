@@ -182,3 +182,24 @@ char* floatToStr(double x)
    *str = '\0';
    return res;
 }
+
+
+long strToLong(const char* str, int* ok)
+{
+   char* end;
+   long res = strtol(str, &end, 10);
+
+   if(ok)
+      *ok = end != str && *end == '\0';
+   return res;
+}
+
+double strToDouble(const char* str, int* ok)
+{
+   char* end;
+   double res = strtod(str, &end);
+
+   if(ok)
+      *ok = end != str && *end == '\0';
+   return res;
+}

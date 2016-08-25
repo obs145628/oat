@@ -41,6 +41,27 @@ void ASTVisitorScope::visit(ASTFunctionDef* e)
                              new StackFrame, _parent);
 }
 
+void ASTVisitorScope::visit(ASTGlobalDef* e)
+{
+   assert(_parent);
+   _scope = new RuntimeScope(e->getToken().getScanner(),
+                             _parent->getFrame(), _parent);
+}
+
+void ASTVisitorScope::visit(ASTClass* e)
+{
+   assert(_parent);
+   _scope = new RuntimeScope(e->getToken().getScanner(),
+                             _parent->getFrame(), _parent);
+}
+
+void ASTVisitorScope::visit(ASTClassMethod* e)
+{
+   assert(_parent);
+   _scope = new RuntimeScope(e->getToken().getScanner(),
+                             new StackFrame, _parent);
+}
+
 void ASTVisitorScope::visitDefault(AST*)
 {
    _scope = _parent;

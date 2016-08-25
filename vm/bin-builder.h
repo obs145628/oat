@@ -83,6 +83,21 @@ void bin_builder_addi_putfunction(s_bin_builder* b, const char* label,
 void bin_builder_addi_putsyscall(s_bin_builder* b, const char* label,
                                  t_vm_saddr saddr, t_vm_int mode,
                                  t_vm_int syscall);
+void bin_builder_addi_putarr(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, t_vm_int mode,
+                             t_vm_saddr it, t_vm_int size);
+void bin_builder_addi_putset(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, t_vm_int mode,
+                             t_vm_saddr it, t_vm_int size);
+void bin_builder_addi_putmap(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, t_vm_int mode,
+                             t_vm_saddr it, t_vm_int size);
+void bin_builder_addi_putobj(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, t_vm_int mode,
+                             t_vm_int id);
+void bin_builder_addi_putclass(s_bin_builder* b, const char* label,
+                               t_vm_saddr saddr, t_vm_int mode,
+                               t_vm_int id);
 void bin_builder_addi_putvar(s_bin_builder* b, const char* label,
                              t_vm_saddr saddr, t_vm_int mode,
                              t_vm_saddr src);
@@ -189,6 +204,19 @@ void bin_builder_addi_ternary(s_bin_builder* b, const char* label,
 void bin_builder_addi_member(s_bin_builder* b, const char* label,
                              t_vm_saddr saddr, const char* strLabel,
                              t_vm_int size,  t_vm_saddr res);
+void bin_builder_addi_defclass(s_bin_builder* b, const char* label,
+                               const char* nameLabel, t_vm_int len,
+                               t_vm_int id);
+void bin_builder_addi_deffield(s_bin_builder* b, const char* label,
+                               t_vm_int id,
+                               const char* nameLabel, t_vm_int len,
+                               t_vm_int type, t_vm_saddr value);
+void bin_builder_addi_defsfield(s_bin_builder* b, const char* label,
+                                t_vm_int id,
+                                const char* nameLabel, t_vm_int len,
+                                t_vm_int type, t_vm_saddr value);
+void bin_builder_addi_defend(s_bin_builder* b, const char* label,
+                               t_vm_int id);
 
 void bin_builder_addia0(s_bin_builder* b, const char* label, t_vm_ins code);
 void bin_builder_addia1(s_bin_builder* b, const char* label, t_vm_ins code,

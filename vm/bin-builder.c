@@ -331,7 +331,7 @@ void bin_builder_add_space(s_bin_builder* b, const char* label, t_vm_addr len)
 
 void bin_builder_add_var(s_bin_builder* b, const char* label)
 {
-   bin_builder_add_space(b, label, 2 * sizeof(dvar));
+   bin_builder_add_space(b, label, 3 * sizeof(dvar));
 }
 
 
@@ -440,6 +440,51 @@ void bin_builder_addi_putsyscall(s_bin_builder* b, const char* label,
 {
    bin_builder_addia3(b, label, VM_INS_PUTSYSCALL,
                       arg_saddr_(saddr), arg_int_(mode), arg_int_(syscall));
+}
+
+void bin_builder_addi_putarr(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, t_vm_int mode,
+                             t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addia4(b, label, VM_INS_PUTARR,
+                      arg_saddr_(saddr), arg_int_(mode),
+                      arg_saddr_(it), arg_int_(size));
+}
+
+void bin_builder_addi_putset(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, t_vm_int mode,
+                             t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addia4(b, label, VM_INS_PUTSET,
+                      arg_saddr_(saddr), arg_int_(mode),
+                      arg_saddr_(it), arg_int_(size));
+}
+
+void bin_builder_addi_putmap(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, t_vm_int mode,
+                             t_vm_saddr it, t_vm_int size)
+{
+   bin_builder_addia4(b, label, VM_INS_PUTMAP,
+                      arg_saddr_(saddr), arg_int_(mode),
+                      arg_saddr_(it), arg_int_(size));
+}
+
+void bin_builder_addi_putobj(s_bin_builder* b, const char* label,
+                             t_vm_saddr saddr, t_vm_int mode,
+                             t_vm_int id)
+{
+   bin_builder_addia3(b, label, VM_INS_PUTOBJ,
+                      arg_saddr_(saddr), arg_int_(mode),
+                      arg_int_(id));
+}
+
+void bin_builder_addi_putclass(s_bin_builder* b, const char* label,
+                               t_vm_saddr saddr, t_vm_int mode,
+                               t_vm_int id)
+{
+   bin_builder_addia3(b, label, VM_INS_PUTCLASS,
+                      arg_saddr_(saddr), arg_int_(mode),
+                      arg_int_(id));
 }
 
 void bin_builder_addi_putvar(s_bin_builder* b, const char* label,
@@ -779,6 +824,41 @@ void bin_builder_addi_member(s_bin_builder* b, const char* label,
    bin_builder_addia4(b, label, VM_INS_MEMBER,
                       arg_saddr_(saddr), arg_label_(strLabel),
                       arg_int_(size), arg_saddr_(res));
+}
+
+void bin_builder_addi_defclass(s_bin_builder* b, const char* label,
+                               const char* nameLabel, t_vm_int len,
+                               t_vm_int id)
+{
+   bin_builder_addia3(b, label, VM_INS_DEFCLASS,
+                      arg_label_(nameLabel), arg_int_(len) ,arg_int_(id));
+}
+
+void bin_builder_addi_deffield(s_bin_builder* b, const char* label,
+                               t_vm_int id,
+                               const char* nameLabel, t_vm_int len,
+                               t_vm_int type, t_vm_saddr value)
+{
+   bin_builder_addia5(b, label, VM_INS_DEFFIELD,
+                      arg_int_(id),  arg_label_(nameLabel), arg_int_(len),
+                      arg_int_(type), arg_saddr_(value));
+}
+
+void bin_builder_addi_defsfield(s_bin_builder* b, const char* label,
+                                t_vm_int id,
+                                const char* nameLabel, t_vm_int len,
+                                t_vm_int type, t_vm_saddr value)
+{
+   bin_builder_addia5(b, label, VM_INS_DEFSFIELD,
+                      arg_int_(id),  arg_label_(nameLabel), arg_int_(len),
+                      arg_int_(type), arg_saddr_(value));
+}
+
+void bin_builder_addi_defend(s_bin_builder* b, const char* label,
+                               t_vm_int id)
+{
+      bin_builder_addia1(b, label, VM_INS_DEFEND,
+                         arg_int_(id));
 }
 
 void bin_builder_addia0(s_bin_builder* b, const char* label, t_vm_ins code)

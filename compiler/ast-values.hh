@@ -90,4 +90,39 @@ public:
    virtual void accept(ASTVisitor& v) override;
 };
 
+class ASTArray: public AST
+{
+
+public:
+   ASTArray(Token token, const std::vector<AST*>& children);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTSet: public AST
+{
+
+public:
+   ASTSet(Token token, const std::vector<AST*>& children);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTMap: public AST
+{
+
+public:
+   ASTMap(Token token, const std::vector<AST*>& children);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
+class ASTThis : public AST
+{
+public:
+   ASTThis(Token token);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
 #endif //!AST_VALUES_HH_

@@ -16,6 +16,11 @@
 char* strClone(const char* s);
 
 /**
+ * Allocates and returns a 0-terminated string from a non-0 terminated one
+ */
+char* strCloneN(const char* s, size_t len);
+
+/**
  * Allocates and returns a string using io format
  */
 char* strFormat(const char* format, ...);

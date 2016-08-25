@@ -17,7 +17,7 @@ long dateAt(long year, long month, long day, long h, long m, long s, long ms);
 
 /**
  * Get all date composants from a timestamp in ms
- * If a pointer is null, the value is ignorer
+ * If a pointer is null, the value is ignored
  */
 void dateGetLocale(long time, long* year, long* month, long* day,
                    long* h, long* m, long* s, long* ms);

@@ -1,0 +1,25 @@
+import "utils.oat";
+
+export class Vector
+{
+  let _x;
+  let _y;
+
+  static origin() => new Vector(0, 0);
+
+  constructor(x, y)
+  {
+    this._x = x;
+    this._y = y;
+  }
+
+  print()
+  {
+    print("{", this._x, ";", this._y, "}\n");
+  }
+
+  getX() => this._x;
+  getY() => this._y;
+  setX(x) this._x = x;
+  setY(y) this._y = y;
+}

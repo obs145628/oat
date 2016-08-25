@@ -1,9 +1,12 @@
 #include "ast-visitor-precheck.hh"
 #include "ast-state.hh"
+#include <set>
 #include "runtime-scope.hh"
 #include "logs.hh"
 #include "../vm/dvar.h"
 #include "bin-builder.hh"
+
+#include <iostream>
 
 ASTVisitorPrecheck::ASTVisitorPrecheck(ASTState* state, BinBuilder* builder)
    : _state(state), _builder(builder)
@@ -56,6 +59,32 @@ void ASTVisitorPrecheck::visit(ASTGlobalDef* e)
    if(scope->hasGlobalSymbol(name))
       _state->tokenError("Global symbol already defined");
    scope->defineGlobal(e, label, DVAR_TNOT);
+}
+
+void ASTVisitorPrecheck::visit(ASTClass* e)
+{
+   std::string name = e->getName()->getName();
+   RuntimeScope* scope = _state->scope();
+
+   if(LOG_PRECHECK)
+      std::cout << "precheck: class " << name << std::endl;
+
+   if(scope->hasGlobalSymbol(name))
+      _state->tokenError("Global symbol already defined");
+   scope->defineClass(name, e);
+
+   std::set<std::string> fields;
+   for(size_t i = 0; i < e->fieldsSize(); ++i)
+   {
+      ASTClassField* child = e->getField(i);
+      std::string fieldName = child->getChild(0)
+         ->getToken().getRepresentation();
+      if(fields.find(fieldName) != fields.end())
+         _state->getChild(child)->tokenError("Class "
+                                             + name + " already has a field "
+                                             + fieldName);
+      fields.insert(fieldName);
+   }
 }
 
 void ASTVisitorPrecheck::visitDefault(AST*)

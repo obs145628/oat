@@ -52,4 +52,8 @@ double strToFloat(const char* str, int* ok);
 char* floatToStr(double x);
 
 
+long strToLong(const char* str, int* ok);
+double strToDouble(const char* str, int* ok);
+
+
 #endif //!NUMBER_H_

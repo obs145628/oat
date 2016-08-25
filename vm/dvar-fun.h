@@ -23,7 +23,12 @@ void dvar_fun_bind(dvar_fun* f, const struct dvar* begin,
                    const struct dvar* end);
 
 t_vm_bool dvar_fun_equals(const dvar_fun* a, const dvar_fun* b);
-t_vm_bool dvar_fun_to_bool_(const dvar_fun* f);
-char* dvar_fun_to_string_(const dvar_fun* f);
+t_vm_bool dvar_fun_to_bool(const dvar_fun* f);
+char* dvar_fun_to_string(const dvar_fun* f);
+uint32_t dvar_fun_to_hash(const dvar_fun* f);
+
+
+struct dvar* c__fun__bind(struct dvar* l, t_vm_int n);
+struct dvar* c__fun__binda(struct dvar* l, t_vm_int n);
 
 #endif //!DVAR_FUN_H_
