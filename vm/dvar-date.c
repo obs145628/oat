@@ -8,7 +8,7 @@
 
 void dvar_date_init()
 {
-   vm_define_begin(VM_CLASS_DATE, "Date");
+   vm_define_begin(VM_CLASS_DATE, "Date", DVAR_CLASS_NOPARENT);
    vm_define_method("constructor", DVAR_CLASS_VPUBLIC, FALSE,
                     VM_SYSCALL_DATE_CONSTRUCTOR);
    vm_define_method("destructor", DVAR_CLASS_VPUBLIC, FALSE,
@@ -39,7 +39,7 @@ void dvar_date_init()
 struct dvar* c__date__constructor(struct dvar* l, t_vm_int n)
 {
    (void) n;
-   dvar_obj* o = l->v_obj;
+   dvar_obj_val* o = l->v_obj->val;
 
    long* time = malloc(sizeof(long));
 
@@ -81,7 +81,7 @@ struct dvar* c__date__constructor(struct dvar* l, t_vm_int n)
 struct dvar* c__date__destructor(struct dvar* l, t_vm_int n)
 {
    (void) n;
-   free(l->v_obj->extra);
+   free(l->v_obj->val->extra);
    return l;
 }
 
@@ -96,7 +96,7 @@ struct dvar* c__date__get_time(struct dvar* l, t_vm_int n)
 {
    (void) n;
 
-   long* time = l->v_obj->extra;
+   long* time = l->v_obj->val->extra;
    dvar_putint(l, DVAR_MVAR, (t_vm_int) (*time));
    return l;
 }
@@ -105,7 +105,7 @@ struct dvar* c__date__get_year(struct dvar* l, t_vm_int n)
 {
    (void) n;
 
-   long* time = l->v_obj->extra;
+   long* time = l->v_obj->val->extra;
    long res;
    dateGetLocale(*time, &res, 0, 0, 0, 0, 0, 0);
 
@@ -117,7 +117,7 @@ struct dvar* c__date__get_month(struct dvar* l, t_vm_int n)
 {
    (void) n;
 
-   long* time = l->v_obj->extra;
+   long* time = l->v_obj->val->extra;
    long res;
    dateGetLocale(*time, 0, &res, 0, 0, 0, 0, 0);
 
@@ -129,7 +129,7 @@ struct dvar* c__date__get_day(struct dvar* l, t_vm_int n)
 {
    (void) n;
 
-   long* time = l->v_obj->extra;
+   long* time = l->v_obj->val->extra;
    long res;
    dateGetLocale(*time, 0, 0, &res, 0, 0, 0, 0);
 
@@ -141,7 +141,7 @@ struct dvar* c__date__get_hours(struct dvar* l, t_vm_int n)
 {
    (void) n;
 
-   long* time = l->v_obj->extra;
+   long* time = l->v_obj->val->extra;
    long res;
    dateGetLocale(*time, 0, 0, 0, &res, 0, 0, 0);
 
@@ -153,7 +153,7 @@ struct dvar* c__date__get_minutes(struct dvar* l, t_vm_int n)
 {
    (void) n;
 
-   long* time = l->v_obj->extra;
+   long* time = l->v_obj->val->extra;
    long res;
    dateGetLocale(*time, 0, 0, 0, 0, &res, 0, 0);
 
@@ -165,7 +165,7 @@ struct dvar* c__date__get_seconds(struct dvar* l, t_vm_int n)
 {
    (void) n;
 
-   long* time = l->v_obj->extra;
+   long* time = l->v_obj->val->extra;
    long res;
    dateGetLocale(*time, 0, 0, 0, 0, 0, &res, 0);
 
@@ -177,7 +177,7 @@ struct dvar* c__date__get_milliseconds(struct dvar* l, t_vm_int n)
 {
    (void) n;
 
-   long* time = l->v_obj->extra;
+   long* time = l->v_obj->val->extra;
    long res;
    dateGetLocale(*time, 0, 0, 0, 0, 0, 0, &res);
 

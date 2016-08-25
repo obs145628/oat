@@ -300,14 +300,18 @@ static void print_ins_putclass_(t_vm_addr addr)
    t_vm_saddr p1;
    t_vm_int p2;
    t_vm_int p3;
+   t_vm_int p4;
 
    memcpy(&p1, buffer, sizeof(t_vm_saddr));
    buffer += sizeof(t_vm_saddr);
    memcpy(&p2, buffer, sizeof(t_vm_int));
    buffer += sizeof(t_vm_int);
    memcpy(&p3, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p4, buffer, sizeof(t_vm_int));
 
-   printf("putclass %zu, %d, %ld\n", (size_t) p1, (int) p2, (long) p3);
+   printf("putclass %zu, %d, %ld, %ld\n", (size_t) p1, (int) p2, (long) p3,
+          (long) p4);
 }
 
 static void print_ins_putvar_(t_vm_addr addr)
@@ -609,6 +613,41 @@ static void print_ins_defend_(t_vm_addr addr)
    printf("defend %ld\n", (long) p1);
 }
 
+static void print_ins_ssuper_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+
+   printf("ssuper %zu\n", (size_t) p1);
+}
+
+static void print_ins_setfscope_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_addr p1;
+   t_vm_int p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_addr));
+   buffer += sizeof(t_vm_addr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+
+   printf("setfscope %zu, %ld (\"", (size_t) p1, (long) p2);
+   fwrite(vm_bin_buffer_begin() + p1, 1, (size_t) p2, stdout);
+   printf("\")\n");
+}
+
+static void print_ins_setfline_(t_vm_addr addr)
+{
+   const char* buffer = vm_bin_buffer_begin() + addr + sizeof(t_vm_ins);
+   t_vm_int p1;
+
+   memcpy(&p1, buffer, sizeof(t_vm_int));
+
+   printf("setfline %zu\n", (long) p1);
+}
+
 
 
 static void print_ins_(t_vm_addr addr)
@@ -688,7 +727,10 @@ static void print_ins_(t_vm_addr addr)
       print_ins_defclass_,
       print_ins_deffield_,
       print_ins_defsfield_,
-      print_ins_defend_
+      print_ins_defend_,
+      print_ins_ssuper_,
+      print_ins_setfscope_,
+      print_ins_setfline_
    };
    t_vm_ins code;
    memcpy(&code, vm_bin_buffer_begin() + addr, sizeof(t_vm_ins));

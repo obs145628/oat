@@ -8,9 +8,9 @@
 
 
 
-static void def_begin_(const char* name, t_vm_int id)
+static void def_begin_(const char* name, t_vm_int id, t_vm_int parent)
 {
-   dvar_define_class(name, strlen(name), id);
+   dvar_define_class(name, strlen(name), id, parent);
 }
 
 static void def_end_(t_vm_int id)
@@ -42,7 +42,7 @@ static void define_rect_()
 {
    dvar zero;
    dvar_init_int(&zero, DVAR_CLASS_TVAR, 0);
-   def_begin_("Rect", VM_CLASS_RECT);
+   def_begin_("Rect", VM_CLASS_RECT, DVAR_CLASS_NOPARENT);
 
    def_field_(VM_CLASS_RECT, "_x",
               DVAR_CLASS_TVAR, DVAR_CLASS_VSPECIAL, FALSE, &zero);
@@ -90,7 +90,7 @@ struct dvar* c__rect__constructor(struct dvar* l, t_vm_int n)
    if(!dvar_cast_to(l + 4, DVAR_TDOUBLE))
       err("Rect constructor: Invalid argument 4 type");
 
-   dvar_obj* o = l->v_obj;
+   dvar_obj_val* o = l->v_obj->val;
 
    dvar_obj_set(o, "_x", l + 1);
    dvar_obj_set(o, "_y", l + 2);
@@ -103,28 +103,28 @@ struct dvar* c__rect__constructor(struct dvar* l, t_vm_int n)
 struct dvar* c__rect__get_x(struct dvar* l, t_vm_int n)
 {
    (void) n;
-   dvar_obj_get(l->v_obj, "_x", l);
+   dvar_obj_get(l->v_obj->val, "_x", l);
    return l;
 }
 
 struct dvar* c__rect__get_y(struct dvar* l, t_vm_int n)
 {
    (void) n;
-   dvar_obj_get(l->v_obj, "_y", l);
+   dvar_obj_get(l->v_obj->val, "_y", l);
    return l;
 }
 
 struct dvar* c__rect__get_width(struct dvar* l, t_vm_int n)
 {
    (void) n;
-   dvar_obj_get(l->v_obj, "_w", l);
+   dvar_obj_get(l->v_obj->val, "_w", l);
    return l;
 }
 
 struct dvar* c__rect__get_height(struct dvar* l, t_vm_int n)
 {
    (void) n;
-   dvar_obj_get(l->v_obj, "_h", l);
+   dvar_obj_get(l->v_obj->val, "_h", l);
    return l;
 }
 
@@ -136,7 +136,7 @@ struct dvar* c__rect__set_x(struct dvar* l, t_vm_int n)
    if(!dvar_cast_to(l + 1, DVAR_TDOUBLE))
       err("Rect.setX: invalid argument type");
 
-   dvar_obj_set(l->v_obj, "_x", l + 1);
+   dvar_obj_set(l->v_obj->val, "_x", l + 1);
 
    dvar_putnull(l, DVAR_MVAR);
    return l;
@@ -150,7 +150,7 @@ struct dvar* c__rect__set_y(struct dvar* l, t_vm_int n)
    if(!dvar_cast_to(l + 1, DVAR_TDOUBLE))
       err("Rect.setY: invalid argument type");
 
-   dvar_obj_set(l->v_obj, "_y", l + 1);
+   dvar_obj_set(l->v_obj->val, "_y", l + 1);
 
    dvar_putnull(l, DVAR_MVAR);
    return l;
@@ -164,7 +164,7 @@ struct dvar* c__rect__set_width(struct dvar* l, t_vm_int n)
    if(!dvar_cast_to(l + 1, DVAR_TDOUBLE))
       err("Rect.setWidth: invalid argument type");
 
-   dvar_obj_set(l->v_obj, "_w", l + 1);
+   dvar_obj_set(l->v_obj->val, "_w", l + 1);
 
    dvar_putnull(l, DVAR_MVAR);
    return l;
@@ -178,7 +178,7 @@ struct dvar* c__rect__set_height(struct dvar* l, t_vm_int n)
    if(!dvar_cast_to(l + 1, DVAR_TDOUBLE))
       err("Rect.setHeight: invalid argument type");
 
-   dvar_obj_set(l->v_obj, "_h", l + 1);
+   dvar_obj_set(l->v_obj->val, "_h", l + 1);
 
    dvar_putnull(l, DVAR_MVAR);
    return l;

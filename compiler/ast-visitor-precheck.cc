@@ -5,6 +5,7 @@
 #include "logs.hh"
 #include "../vm/dvar.h"
 #include "bin-builder.hh"
+#include "slib.hh"
 
 #include <iostream>
 
@@ -68,6 +69,15 @@ void ASTVisitorPrecheck::visit(ASTClass* e)
 
    if(LOG_PRECHECK)
       std::cout << "precheck: class " << name << std::endl;
+
+   if(e->hasParent())
+   {
+      std::string parentName = e->getParent()->getName();
+      if(SLib::hasClass(parentName))
+         _state->tokenError("Parent class can't be a native class");
+      if(!_state->scope()->hasClass(parentName))
+         _state->tokenError("Undefined parent class");
+   }
 
    if(scope->hasGlobalSymbol(name))
       _state->tokenError("Global symbol already defined");

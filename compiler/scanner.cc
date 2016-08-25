@@ -7,7 +7,7 @@
 #include "str.hh"
 
 Scanner::Scanner(const std::string& path)
-   : Scanner(str::dirname(path), path, readFile(path))
+   : Scanner(str::dirname(path), str::getAbsolute(path), readFile(path))
 {
 
 }
@@ -90,8 +90,7 @@ void Scanner::tokenError(Token t, const std::string& message)
    size_t pos = t.getPosition();
 
    oss << "Compilation error: " << std::endl;
-   oss << "Token: " << t << std::endl;
-   oss << "Message: " << message << std::endl << std::endl;
+   oss << "Message: " << message << std::endl;
 
    size_t row = 1;
    size_t col = 1;
@@ -144,6 +143,7 @@ void Scanner::tokenError(Token t, const std::string& message)
 void Scanner::readAll()
 {
    _it = _begin;
+   _line = 1;
    _tokens.clear();
 
    while(true)
@@ -460,7 +460,7 @@ bool Scanner::validChar(const std::string& str)
 Token Scanner::buildToken(const std::string& token, TokenType type)
 {
    return Token(this, token, type,
-                static_cast<std::size_t>(get_pos()) - token.size());
+                static_cast<std::size_t>(get_pos()) - token.size(), _line);
 }
 
 void Scanner::readTokenError(const std::string& token,
@@ -476,7 +476,10 @@ bool Scanner::is_end() const
 char Scanner::read_char()
 {
    assert(_it != _end);
-   return *(_it++);
+   char c = *(_it++);
+   if(c == '\n')
+      ++_line;
+   return c;
 }
 
 char Scanner::peek_char() const
@@ -494,6 +497,7 @@ void Scanner::set_pos(std::size_t pos)
 {
    const char* it = _begin + pos;
    assert(it >= _begin && it <= _end);
+   move_pos(pos - get_pos());
    _it = it;
 }
 
@@ -501,6 +505,29 @@ void Scanner::move_pos(std::ptrdiff_t diff)
 {
    const char* it = _it + diff;
    assert(it >= _begin && it <= _end);
+
+   if(diff < 0)
+   {
+      while(diff)
+      {
+         char c = *(--_it);
+         if(c == '\n')
+            --_line;
+         ++diff;
+      }
+   }
+
+   else
+   {
+      while(diff)
+      {
+         char c = *(_it++);
+         if(c == '\n')
+            ++_line;
+         --diff;
+      }
+   }
+
    _it = it;
 }
 

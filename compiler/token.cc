@@ -5,8 +5,9 @@
 #include "scanner.hh"
 
 Token::Token(Scanner* scanner, const std::string& token,
-             TokenType type, std::size_t pos)
-   : _scanner(scanner), _representation(token), _type(type), _pos(pos)
+             TokenType type, std::size_t pos, std::size_t line)
+   : _scanner(scanner), _representation(token), _type(type),
+     _pos(pos), _line(line)
 {
 
 }
@@ -24,6 +25,11 @@ std::string Token::getRepresentation() const
 std::size_t Token::getPosition() const
 {
    return _pos;
+}
+
+std::size_t Token::getLine() const
+{
+   return _line;
 }
 
 TokenType Token::getType() const
@@ -213,7 +219,8 @@ const std::map<TokenType, std::string> Token::TYPES_NAMES = {
    {TokenType::kw_import, "kw_import"},
    {TokenType::kw_class, "kw_class"},
    {TokenType::kw_static, "kw_static"},
-   {TokenType::kw_this, "kw_this"}
+   {TokenType::kw_this, "kw_this"},
+   {TokenType::kw_super, "kw_super"}
 };
 
 const std::map<std::string, TokenType> Token::TYPES_LOOKUP = {
@@ -281,6 +288,7 @@ const std::map<std::string, TokenType> Token::TYPES_LOOKUP = {
    {"class", TokenType::kw_class},
    {"static", TokenType::kw_static},
    {"this", TokenType::kw_this},
+   {"super", TokenType::kw_super},
 
 
    {"int", TokenType::reserved},

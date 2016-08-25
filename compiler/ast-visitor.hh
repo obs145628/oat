@@ -26,6 +26,7 @@ public:
    virtual void visit(ASTSet* e);
    virtual void visit(ASTMap* e);
    virtual void visit(ASTThis* e);
+   virtual void visit(ASTSuper* e);
 
    virtual void visit(ASTOp1Plus* e);
    virtual void visit(ASTOp1Minus* e);

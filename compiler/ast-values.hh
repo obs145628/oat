@@ -125,4 +125,12 @@ public:
    virtual void accept(ASTVisitor& v) override;
 };
 
+class ASTSuper : public AST
+{
+public:
+   ASTSuper(Token token);
+
+   virtual void accept(ASTVisitor& v) override;
+};
+
 #endif //!AST_VALUES_HH_

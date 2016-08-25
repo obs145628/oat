@@ -6,12 +6,20 @@
 struct dvar;
 struct dvar_class;
 
-struct dvar_obj
+struct dvar_obj_val
 {
    struct dvar_class* c;
    struct dvar* data;
    void* extra;
    t_vm_int refs;
+};
+
+typedef struct dvar_obj_val dvar_obj_val;
+
+struct dvar_obj
+{
+   dvar_obj_val* val;
+   t_vm_bool is_super;
 };
 
 typedef struct dvar_obj dvar_obj;
@@ -29,13 +37,14 @@ uint32_t dvar_obj_to_hash(const dvar_obj* o);
 void dvar_obj_member(const struct dvar* self, const char* name,
                      struct dvar* dst);
 
-void dvar_obj_get(const dvar_obj* o, const char* name, struct dvar* dst);
-void dvar_obj_set(const dvar_obj* o, const char* name, const struct dvar* val);
+void dvar_obj_get(const dvar_obj_val* o, const char* name, struct dvar* dst);
+void dvar_obj_set(const dvar_obj_val* o, const char* name,
+                  const struct dvar* val);
 void dvar_obj_call(const struct dvar* v, const char* name,
                    const struct dvar* begin, const struct dvar* end,
                    struct dvar* res);
 
-t_vm_bool dvar_obj_has(const dvar_obj* o, const char* name);
+t_vm_bool dvar_obj_has(const dvar_obj_val* o, const char* name);
 
 
 

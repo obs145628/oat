@@ -3,4 +3,4 @@ ast-visitor-compile.o: ast-visitor-compile.cc ast-visitor-compile.hh \
  ast-operators.hh ast-statements.hh ast-functions.hh ast-modules.hh \
  ast-class.hh ast-state.hh ast-infos.hh dot-tree.hh bin-builder.hh \
  ../vm/bin-builder.h ../vm/parray.h ../vm/pmap.h ../vm/const.h \
- runtime-scope.hh stack-frame.hh slib.hh logs.hh ../vm/dvar.h
+ runtime-scope.hh stack-frame.hh slib.hh logs.hh scanner.hh ../vm/dvar.h

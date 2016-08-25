@@ -2,12 +2,41 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+static const char* scope_name_ = NULL;
+static size_t scope_name_len_ = 0;
+static size_t line_number_ = 0;
+
+void err_set_scope_name(const char* scope_name, size_t len)
+{
+   scope_name_ = scope_name;
+   scope_name_len_ = len;
+}
+
+void err_set_line_(size_t line)
+{
+   line_number_ = line;
+}
 
 static void handleError(const char *message)
 {
-   fprintf(stderr, "Fatal error occured on oat execution\n"
-           "Message: %s\n"
-           "Program aborted\n", message);
+   fprintf(stderr, "A fatal error occured during execution\n");
+
+   if(scope_name_)
+   {
+      char* scope_name = malloc(scope_name_len_ + 1);
+      memcpy(scope_name, scope_name_, scope_name_len_);
+      scope_name[scope_name_len_] = '\0';
+
+      fprintf(stderr, "At %s", scope_name);
+      if(line_number_)
+         fprintf(stderr, "::%zu", line_number_);
+      fprintf(stderr, "\n");
+   }
+
+   fprintf(stderr, "Error: %s\n", message);
+   fprintf(stderr, "Program aborted\n");
 }
 
 static void errv(const char* format, va_list args)

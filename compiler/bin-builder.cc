@@ -1,4 +1,5 @@
 #include "bin-builder.hh"
+#include <stdexcept>
 
 BinBuilder::BinBuilder()
    : _builder(bin_builder_new())
@@ -15,7 +16,8 @@ BinBuilder::~BinBuilder()
 
 void BinBuilder::saveToFile(const std::string& outPath)
 {
-   bin_builder_save(_builder, outPath.c_str());
+   if(bin_builder_save(_builder, outPath.c_str()))
+      throw std::runtime_error{"Unable to save binaries to " + outPath};
 }
 
 std::string BinBuilder::getUniqueLabel(const std::string& prefix)
@@ -539,9 +541,9 @@ void BinBuilder::addiMember(t_vm_saddr saddr, const std::string& strLabel,
 }
 
 void BinBuilder::addiDefclass(const std::string& nameLabel, t_vm_int len,
-                              t_vm_int id)
+                              t_vm_int id, t_vm_int parent)
 {
-   bin_builder_addi_defclass(_builder, 0, getLabel(nameLabel), len, id);
+   bin_builder_addi_defclass(_builder, 0, getLabel(nameLabel), len, id, parent);
 }
 
 void BinBuilder::addiDeffield(t_vm_int id, const std::string& nameLabel,
@@ -563,6 +565,21 @@ void BinBuilder::addiDefsfield(t_vm_int id, const std::string& nameLabel,
 void BinBuilder::addiDefend(t_vm_int id)
 {
    bin_builder_addi_defend(_builder, 0, id);
+}
+
+void BinBuilder::addiSsuper(t_vm_saddr dst)
+{
+   bin_builder_addi_ssuper(_builder, 0, dst);
+}
+
+void BinBuilder::addiSetfscope(const std::string& nameLabel, t_vm_int len)
+{
+   bin_builder_addi_setfscope(_builder, 0, getLabel(nameLabel), len);
+}
+
+void BinBuilder::addiSetfline(t_vm_int line)
+{
+   bin_builder_addi_setfline(_builder, 0, line);
 }
 
 
@@ -1009,10 +1026,10 @@ void BinBuilder::addiMember(const std::string& label,
 
 void BinBuilder::addiDefclass(const std::string& label,
                               const std::string& nameLabel, t_vm_int len,
-                              t_vm_int id)
+                              t_vm_int id, t_vm_int parent)
 {
    bin_builder_addi_defclass(_builder, getLabel(label),
-                             getLabel(nameLabel), len, id);
+                             getLabel(nameLabel), len, id, parent);
 }
 
 void BinBuilder::addiDeffield(const std::string& label,
@@ -1037,6 +1054,24 @@ void BinBuilder::addiDefend(const std::string& label,
                             t_vm_int id)
 {
    bin_builder_addi_defend(_builder, getLabel(label), id);
+}
+
+void BinBuilder::addiSsuper(const std::string& label,
+                            t_vm_saddr dst)
+{
+   bin_builder_addi_ssuper(_builder, getLabel(label), dst);
+}
+
+void BinBuilder::addiSetfscope(const std::string& label,
+                               const std::string& nameLabel, t_vm_int len)
+{
+   bin_builder_addi_setfscope(_builder, getLabel(label),
+                              getLabel(nameLabel), len);
+}
+
+void BinBuilder::addiSetfline(const std::string& label, t_vm_int line)
+{
+   bin_builder_addi_setfline(_builder, getLabel(label), line);
 }
 
 

@@ -13,14 +13,20 @@ class ASTStatementsBlock;
 class ASTClass : public ASTComponent
 {
 public:
-   ASTClass(Token token, ASTSymbol* name,
+   ASTClass(Token token, ASTSymbol* name, ASTSymbol* parent,
             const std::vector<ASTClassField*>& fields, bool exported);
 
    virtual void accept(ASTVisitor& v) override;
 
+   bool hasParent() const;
+
    ASTSymbol* getName() const;
+   ASTSymbol* getParent() const;
    size_t fieldsSize() const;
    ASTClassField* getField(size_t pos) const;
+
+private:
+   bool _parent;
 };
 
 class ASTClassField : public AST

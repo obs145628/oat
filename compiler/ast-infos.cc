@@ -111,6 +111,12 @@ void ASTVisitorInfos::visit(ASTThis*)
    _infos.desc = "val_this";
 }
 
+void ASTVisitorInfos::visit(ASTSuper*)
+{
+   _infos.type = ASTType::val_super;
+   _infos.desc = "val_super";
+}
+
 void ASTVisitorInfos::visit(ASTOp1Plus*)
 {
    _infos.type = ASTType::op1_plus;

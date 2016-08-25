@@ -2,8 +2,53 @@ import "maths.oat";
 import "utils.oat";
 import "Vector.oat";
 
-main()
+class Human
 {
-    let t = Date.now();
-    println(t);
+  let _name;
+  let _age;
+
+  constructor(name, age)
+  {
+    this._name = name;
+    this._age = age;
+  }
+
+  present()
+  {
+    print("Hello, my name is ", this._name,
+      ". I am ", this._age, " years old.\n");
+  }
+
+}
+
+class Warrior : Human
+{
+
+  let _weapon;
+
+  constructor(name, age, weapon)
+  {
+    super.constructor(name, age);
+    this._weapon = weapon;
+  }
+
+  present()
+  {
+    super.present();
+    print("I am fighting with a ", this._weapon, ".\n");
+  }
+
+}
+
+god()
+{
+  let v = new Vector(7, 14);
+  => v.print;
+}
+
+main(args)
+{
+
+  let me = new Warrior("Steven", 20, "staff");
+  me.present();
 }

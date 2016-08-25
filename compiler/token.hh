@@ -84,7 +84,8 @@ enum class TokenType
       kw_import,
       kw_class,
       kw_static,
-      kw_this
+      kw_this,
+      kw_super
 };
 
 class Token
@@ -92,11 +93,12 @@ class Token
 
 public:
    Token(Scanner* scanner, const std::string& token,
-         TokenType type, std::size_t pos);
+         TokenType type, std::size_t pos, std::size_t line);
 
    Scanner* getScanner() const;
    std::string getRepresentation() const;
    std::size_t getPosition() const;
+   std::size_t getLine() const;
    TokenType getType() const;
    std::string getTypeString() const;
    bool isOfType(TokenType type) const;
@@ -121,6 +123,7 @@ private:
    std::string _representation;
    TokenType _type;
    std::size_t _pos;
+   std::size_t _line;
 
 
 

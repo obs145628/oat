@@ -5,7 +5,7 @@
 
 struct dvar;
 
-void vm_define_begin(t_vm_int id, const char* name);
+void vm_define_begin(t_vm_int id, const char* name, t_vm_int parent);
 void vm_define_end_();
 void vm_define_field(const char* name, t_vm_int type,
                      t_vm_int visibility, t_vm_bool is_static,

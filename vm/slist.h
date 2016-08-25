@@ -15,6 +15,7 @@ typedef struct {
 } SList;
 
 SList* SListNew();
+SList* SListNewFromIt(char** begin, char** end);
 void SListFree(SList* l);
 SList* SListClone(const SList* l);
 

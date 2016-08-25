@@ -84,8 +84,11 @@ const t_vm_insinfos VM_INS_INFOS[] = {
    {"subscript", S_OPB},
    {"ternary", S_INS + 4 * S_SADDR},
    {"member", S_INS + S_SADDR + S_ADDR + S_INT + S_SADDR},
-   {"defclass", S_INS + S_ADDR + S_INT +S_INT},
+   {"defclass", S_INS + S_ADDR + S_INT +S_INT + S_INT},
    {"deffield", S_INS + S_INT + S_ADDR + S_INT +S_INT + S_SADDR},
    {"defsfield", S_INS + S_INT + S_ADDR + S_INT +S_INT + S_SADDR},
    {"defend", S_INS + S_INT},
+   {"ssuper", S_INS + S_SADDR},
+   {"setfscope", S_INS + S_ADDR + S_INT},
+   {"setfline", S_INS + S_INT}
 };

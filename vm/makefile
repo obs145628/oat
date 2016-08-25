@@ -1,4 +1,4 @@
-PROGRAM = app.out
+PROGRAM = oat
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 

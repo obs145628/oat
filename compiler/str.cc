@@ -2,6 +2,8 @@
 #include "chars.hh"
 #include <stdexcept>
 #include <sstream>
+#include <linux/limits.h>
+#include <cstdlib>
 
 #include <iostream>
 
@@ -203,6 +205,13 @@ namespace str
          return a + b;
       else
          return a + '/' + b;
+   }
+
+   std::string getAbsolute(const std::string& path)
+   {
+      static char absoluteBuffer[PATH_MAX];
+      realpath(path.c_str(), absoluteBuffer);
+      return std::string (absoluteBuffer);
    }
 
 }

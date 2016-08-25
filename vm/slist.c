@@ -32,6 +32,24 @@ SList* SListNew()
    return l;
 }
 
+SList* SListNewFromIt(char** begin, char** end)
+{
+   size_t len = end - begin;
+   size_t allocated = MIN_ALLOC;
+   while(len > allocated)
+      allocated *= 2;
+
+   SList* l = malloc(sizeof(SList));
+   l->begin = malloc(allocated *  sizeof(char*));
+   l->end = l->begin + len;
+   l->len = len;
+   l->allocated = allocated;
+
+   for(size_t i = 0; i < len; ++i)
+      l->begin[i] = strClone(begin[i]);
+   return l;
+}
+
 void SListFree(SList* l)
 {
    for(char** it = l->begin; it != l->end; ++it)

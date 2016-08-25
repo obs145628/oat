@@ -129,7 +129,7 @@ public:
    void addiMember(t_vm_saddr saddr, const std::string& strLabel,
                    t_vm_int size, t_vm_saddr res);
    void addiDefclass(const std::string& nameLabel, t_vm_int len,
-                     t_vm_int id);
+                     t_vm_int id, t_vm_int parent);
    void addiDeffield(t_vm_int id, const std::string& nameLabel,
                      t_vm_int len, t_vm_int type,
                      t_vm_saddr value);
@@ -137,6 +137,9 @@ public:
                       t_vm_int len, t_vm_int type,
                       t_vm_saddr value);
    void addiDefend(t_vm_int id);
+   void addiSsuper(t_vm_saddr dst);
+   void addiSetfscope(const std::string& nameLabel, t_vm_int len);
+   void addiSetfline(t_vm_int line);
 
    void addiNop(const std::string& label);
    void addiJump(const std::string& label, const std::string& addrLabel);
@@ -269,7 +272,7 @@ public:
                    t_vm_int size, t_vm_saddr res);
    void addiDefclass(const std::string& label,
                      const std::string& nameLabel, t_vm_int len,
-                     t_vm_int id);
+                     t_vm_int id, t_vm_int parent);
    void addiDeffield(const std::string& label,
                      t_vm_int id, const std::string& nameLabel,
                      t_vm_int len, t_vm_int type,
@@ -280,6 +283,12 @@ public:
                       t_vm_saddr value);
    void addiDefend(const std::string& label,
                    t_vm_int id);
+   void addiSsuper(const std::string& label,
+                   t_vm_saddr dst);
+   void addiSetfscope(const std::string& label,
+                      const std::string& nameLabel, t_vm_int len);
+   void addiSetfline(const std::string& label,
+                     t_vm_int line);
 
 
    void addia0(t_vm_ins code);

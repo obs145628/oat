@@ -5,10 +5,13 @@
 #include "vm-stack.h"
 #include "vm-bin.h"
 #include "vm-syscall.h"
+#include "vm-classes.h"
+#include "vm-args.h"
 #include "const.h"
 #include "dvar.h"
 #include "dvar-fun.h"
 #include "dvar-class.h"
+#include "dvar-obj.h"
 #include "date.h"
 #include "err.h"
 
@@ -815,14 +818,17 @@ static void exec_ins_defclass_()
    t_vm_addr p1;
    t_vm_int p2;
    t_vm_int p3;
+   t_vm_int p4;
 
    memcpy(&p1, buffer, sizeof(t_vm_addr));
    buffer += sizeof(t_vm_addr);
    memcpy(&p2, buffer, sizeof(t_vm_int));
    buffer += sizeof(t_vm_int);
    memcpy(&p3, buffer, sizeof(t_vm_int));
+   buffer += sizeof(t_vm_int);
+   memcpy(&p4, buffer, sizeof(t_vm_int));
 
-   dvar_define_class(vm_bin_buffer_begin() + p1, p2, p3);
+   dvar_define_class(vm_bin_buffer_begin() + p1, p2, p3, p4);
    move_pc_to_next_();
 }
 
@@ -885,10 +891,52 @@ static void exec_ins_defend_()
    move_pc_to_next_();
 }
 
+static void exec_ins_ssuper_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_saddr p1;
+
+   memcpy(&p1, buffer, sizeof(t_vm_saddr));
+
+   dvar* v = vm_stack_at(p1);
+   assert(v->type == DVAR_TOBJ);
+   v->v_obj->is_super = TRUE;
+
+   move_pc_to_next_();
+}
+
+static void exec_ins_setfscope_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_addr p1;
+   t_vm_int p2;
+
+   memcpy(&p1, buffer, sizeof(t_vm_addr));
+   buffer += sizeof(t_vm_addr);
+   memcpy(&p2, buffer, sizeof(t_vm_int));
+
+   err_set_scope_name(vm_bin_buffer_begin() + p1, p2);
+   move_pc_to_next_();
+}
+
+static void exec_ins_setfline_()
+{
+   const char* buffer = vm_bin_buffer_pc() + sizeof(t_vm_ins);
+   t_vm_int p1;
+
+   memcpy(&p1, buffer, sizeof(t_vm_int));
+
+   assert(p1 >= 0);
+   err_set_line_(p1);
+   move_pc_to_next_();
+}
+
 
 void vm_exec_init()
 {
+   vm_classes_init();
    vm_stack_init();
+   dvar_copy(vm_stack_sp(), vm_args_get_var());
    pcf_ = pcf_frames_;
    pcf_addrs_ = pcf_addrs_tab_;
    stack_size_ = 1;
@@ -978,7 +1026,10 @@ void vm_exec_ins()
       exec_ins_defclass_,
       exec_ins_deffield_,
       exec_ins_defsfield_,
-      exec_ins_defend_
+      exec_ins_defend_,
+      exec_ins_ssuper_,
+      exec_ins_setfscope_,
+      exec_ins_setfline_
    };
 
    memcpy(&ins_code_, vm_bin_buffer_pc(), sizeof(t_vm_ins));

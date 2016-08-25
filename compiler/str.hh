@@ -20,6 +20,8 @@ namespace str
 
    std::string pathJoin(const std::string& a, const std::string& b);
 
+   std::string getAbsolute(const std::string& path);
+
 }
 
 #endif //!STR_HH_

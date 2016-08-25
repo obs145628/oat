@@ -35,6 +35,7 @@ private:
    const char* _end;
    const char* _it;
    std::size_t _pos;
+   std::size_t _line;
    std::vector<Token> _tokens;
 
    static std::string readFile(const std::string& path);

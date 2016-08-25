@@ -23,15 +23,12 @@ static dvar* syscall_exit_(dvar* v, t_vm_int argc)
 {
    (void) argc;
    int code;
-   long time = dateNow() - vm_exec_get_start_time();
 
    if(v->type == DVAR_TINT)
       code = (int) v->v_int;
    else
       code = 1;
 
-   printf("Program execution finished with code %d\n", code);
-   printf("Duration: %ldms\n", time);
    exit(code);
    return NULL;;
 }

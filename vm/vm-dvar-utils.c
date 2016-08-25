@@ -6,11 +6,11 @@
 
 static t_vm_int id_ = -1;
 
-void vm_define_begin(t_vm_int id, const char* name)
+void vm_define_begin(t_vm_int id, const char* name, t_vm_int parent)
 {
    assert(id_ == -1);
    id_ = id;
-   dvar_define_class(name, strlen(name), id);
+   dvar_define_class(name, strlen(name), id, parent);
 }
 
 void vm_define_end_()

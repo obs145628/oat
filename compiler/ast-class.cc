@@ -3,11 +3,13 @@
 #include "ast-values.hh"
 #include <cassert>
 
-ASTClass::ASTClass(Token token, ASTSymbol* name,
+ASTClass::ASTClass(Token token, ASTSymbol* name, ASTSymbol* parent,
                    const std::vector<ASTClassField*>& fields, bool exported)
-   : ASTComponent(token, {name}, exported)
+   : ASTComponent(token, {name}, exported), _parent(!!parent)
 {
    assert(token.isOfType(TokenType::kw_class));
+   if(_parent)
+      _children.push_back(parent);
    for(ASTClassField* f : fields)
       _children.push_back(f);
 }
@@ -17,18 +19,32 @@ void ASTClass::accept(ASTVisitor& v)
    v.visit(this);
 }
 
+bool ASTClass::hasParent() const
+{
+   return _parent;
+}
+
 ASTSymbol* ASTClass::getName() const
 {
    return dynamic_cast<ASTSymbol*> (_children[0]);
 }
 
+ASTSymbol* ASTClass::getParent() const
+{
+   assert(_parent);
+   return dynamic_cast<ASTSymbol*> (_children[1]);
+}
+
 size_t ASTClass::fieldsSize() const
 {
-   return _children.size() - 1;
+   size_t dec = _parent ? 2 : 1;
+   return _children.size() - dec;
 }
 
 ASTClassField* ASTClass::getField(size_t pos) const
 {
+   if(_parent)
+      ++pos;
    assert(pos + 1 < _children.size());
    return dynamic_cast<ASTClassField*> (_children[pos+1]);
 }

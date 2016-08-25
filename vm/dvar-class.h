@@ -12,6 +12,8 @@
 # define DVAR_CLASS_VPUBLIC (1)
 # define DVAR_CLASS_VSPECIAL (8)
 
+# define DVAR_CLASS_NOPARENT (-1)
+
 struct dvar;
 
 struct dvar_field
@@ -28,6 +30,7 @@ typedef struct dvar_field dvar_field;
 
 struct dvar_class
 {
+   struct dvar_class* parent;
    char* name;
    t_vm_int id;
    s_pmap* fields;
@@ -53,7 +56,8 @@ void dvar_class_member(const struct dvar* self, const char* name,
 
 void dvar_define_init();
 
-void dvar_define_class(const char* name, t_vm_int len, t_vm_int id);
+void dvar_define_class(const char* name, t_vm_int len, t_vm_int id,
+   t_vm_int parent_id);
 
 void dvar_define_field(t_vm_int class_id, const char* name, t_vm_int len,
                        t_vm_int type, t_vm_int visibility, t_vm_bool is_static,

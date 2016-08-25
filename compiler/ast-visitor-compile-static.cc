@@ -46,10 +46,12 @@ void ASTVisitorCompileStatic::visit(ASTModule*)
    _builder->addiNop("_main");
    visitChildren();
 
+
    t_vm_saddr scopeSize = _state->frame()->getSize();
    t_vm_saddr temp1 = _state->getVar(0);
    t_vm_saddr temp2 = _state->getVar(1);
 
+   _builder->addiMove(scopeSize, 0);
    _builder->addiFjump(mainLabel, scopeSize);
    _builder->addiPutnull(temp1, DVAR_MVAR);
    _builder->addiNeq(scopeSize, temp1, temp2);
@@ -100,10 +102,22 @@ void ASTVisitorCompileStatic::visit(ASTClass* e)
    t_vm_int id = _state->scope()->getClass(name).id;
    std::string nameLabel = _state->getLabel(0);
 
+   t_vm_int parentId;
+   if(e->hasParent())
+   {
+      std::string parentName = e->getParent()->getName();
+      if(SLib::hasClass(parentName))
+         parentId = SLib::getClass(parentName);
+      else
+         parentId = _state->scope()->getClass(parentName).id;
+   }
+   else
+      parentId = -1;
+
    if(LOG_COMPILE)
       std::cout << "compile: class " + name << std::endl;
 
-   _builder->addiDefclass(nameLabel, len, id);
+   _builder->addiDefclass(nameLabel, len, id, parentId);
    visitChildren();
    _builder->addiDefend(id);
 }
@@ -139,6 +153,8 @@ void ASTVisitorCompileStatic::visit(ASTClassVariable* e)
 
    if(LOG_COMPILE)
       std::cout << "compile: class variable " + name << std::endl;
+
+
 
    if(e->hasValue())
    {

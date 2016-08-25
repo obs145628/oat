@@ -19,6 +19,7 @@ enum class ASTType
       val_set,
       val_map,
       val_this,
+      val_super,
       op1_plus,
       op1_minus,
       op2_plus,
@@ -111,6 +112,7 @@ public:
    virtual void visit(ASTSet* e) override;
    virtual void visit(ASTMap* e) override;
    virtual void visit(ASTThis* e) override;
+   virtual void visit(ASTSuper* e) override;
 
    virtual void visit(ASTOp1Plus* e) override;
    virtual void visit(ASTOp1Minus* e) override;

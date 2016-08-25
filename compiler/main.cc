@@ -1,43 +1,53 @@
 #include <iostream>
-#include "scanner.hh"
+#include <string.h>
+#include <stdexcept>
 #include "compiler.hh"
-#include "dot-tree.hh"
 
-#include "str.hh"
-
-#define DISPLAY_TOKENS 0
-#define COMPILE 1
-#define BUILD_TREE 1
-
-#define SOURCE_MAIN "/home/obs/it/oat/tests/main.oat"
-#define SOURCE_EX "/home/obs/it/oat/tests/example.oat"
-#define OUT "/home/obs/it/oat/tests/main.oatbin"
-#define OUT_TREE "/home/obs/it/oat/tests/ast.png"
-
-int main()
+int main(int argv, char** argc)
 {
 
-   if(DISPLAY_TOKENS)
+   std::string srcPath;
+   std::string dstPath;
+   bool outOption = false;
+
+   for(int i = 1; i < argv; ++i)
    {
-      Scanner scanner(SOURCE_MAIN);
-      while(!scanner.isEof())
-      {
-         Token t = scanner.getToken();
-         scanner.next();
-         std::cout << t << std::endl;
-      }
+      std::string arg(argc[i]);
+
+      if(outOption)
+         dstPath = arg;
+
+      else if(arg == "-o")
+         outOption = true;
+
+      else
+         srcPath = arg;
    }
 
-   if(COMPILE)
+   if(srcPath.empty())
    {
-      Compiler compiler(SOURCE_MAIN);
-      compiler.compileToPath(OUT);
-
-      if(BUILD_TREE)
-      {
-         DotTree* tree = compiler.buildDotTree();
-         tree->saveImage(OUT_TREE);
-         delete tree;
-      }
+      std::cerr << "No input file" << std::endl;
+      return 1;
    }
+
+   if(dstPath.empty())
+   {
+      std::cerr << "No output file" << std::endl;
+      return 1;
+   }
+
+   try
+   {
+      Compiler compiler(srcPath);
+      compiler.compileToPath(dstPath);
+   }
+
+   catch(const std::exception &e)
+   {
+      std::cerr << e.what() << std::endl;
+      std::cerr << "Compilation aborted !" << std::endl;
+      return 1;
+   }
+
+   return 0;
 }

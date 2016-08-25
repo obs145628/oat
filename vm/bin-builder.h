@@ -206,7 +206,7 @@ void bin_builder_addi_member(s_bin_builder* b, const char* label,
                              t_vm_int size,  t_vm_saddr res);
 void bin_builder_addi_defclass(s_bin_builder* b, const char* label,
                                const char* nameLabel, t_vm_int len,
-                               t_vm_int id);
+                               t_vm_int id, t_vm_int parent);
 void bin_builder_addi_deffield(s_bin_builder* b, const char* label,
                                t_vm_int id,
                                const char* nameLabel, t_vm_int len,
@@ -217,6 +217,12 @@ void bin_builder_addi_defsfield(s_bin_builder* b, const char* label,
                                 t_vm_int type, t_vm_saddr value);
 void bin_builder_addi_defend(s_bin_builder* b, const char* label,
                                t_vm_int id);
+void bin_builder_addi_ssuper(s_bin_builder* b, const char* label,
+                             t_vm_saddr dst);
+void bin_builder_addi_setfscope(s_bin_builder* b, const char* label,
+                                const char* nameLabel, t_vm_int len);
+void bin_builder_addi_setfline(s_bin_builder* b, const char* label,
+                               t_vm_int line);
 
 void bin_builder_addia0(s_bin_builder* b, const char* label, t_vm_ins code);
 void bin_builder_addia1(s_bin_builder* b, const char* label, t_vm_ins code,
@@ -239,7 +245,7 @@ void bin_builder_add_opu(s_bin_builder* b, const char* label, t_vm_ins code,
 void bin_builder_add_opb(s_bin_builder* b, const char* label, t_vm_ins code,
                          t_vm_saddr a1, t_vm_saddr a2, t_vm_saddr a3);
 
-void bin_builder_save(s_bin_builder* b, const char* outPath);
+int bin_builder_save(s_bin_builder* b, const char* outPath);
 
 # ifdef __cplusplus
 }

@@ -26,6 +26,7 @@ public:
    virtual void visit(ASTSet* e) override;
    virtual void visit(ASTMap* e) override;
    virtual void visit(ASTThis* e) override;
+   virtual void visit(ASTSuper* e) override;
 
    virtual void visit(ASTOp1Plus* e) override;
    virtual void visit(ASTOp1Minus* e) override;
@@ -103,6 +104,9 @@ private:
    void compileAssign(t_vm_ins code);
 
    ASTState* getParentLoop();
+
+   void addLineFlag(Token t);
+   void addLineFlag();
 
    std::string getClassName() const;
    t_vm_int getClassId() const;

@@ -5,7 +5,7 @@
 
 ASTClass* Parser::class_def()
 {
-   //"export"? "class" symbol "{" clas_field* "}"
+   //"export"? "class" symbol (":" symbol)? "{" clas_field* "}"
 
    std::vector<ASTClassField*> fields;
    ASTSymbol* symbol;
@@ -29,6 +29,17 @@ ASTClass* Parser::class_def()
    symbol = new ASTSymbol(getToken());
    next();
 
+   ASTSymbol* parent = nullptr;
+   if(isTokenOfType(TokenType::collon))
+   {
+      next();
+      Token parentToken = getToken();
+      if(!parentToken.isOfType(TokenType::symbol))
+         tokenError(parentToken, "parent class name expected");
+      next();
+      parent = new ASTSymbol(parentToken);
+   }
+
    if(!isTokenOfType(TokenType::lcurlybracket))
       tokenError(getToken(), "{ expected");
    next();
@@ -37,7 +48,7 @@ ASTClass* Parser::class_def()
       fields.push_back(class_field());
    next();
 
-   return new ASTClass(classToken, symbol, fields, exported);
+   return new ASTClass(classToken, symbol, parent, fields, exported);
 }
 
 ASTClassField* Parser::class_field()

@@ -390,6 +390,11 @@ AST* Parser::expr_value()
       return new ASTThis(t);
    }
 
+   else if(t.isOfType(TokenType::kw_super)) //super value
+   {
+      return new ASTSuper(t);
+   }
+
    else if(t.isOfType(TokenType::symbol)) //variable value
    {
       return new ASTSymbolValue(t);

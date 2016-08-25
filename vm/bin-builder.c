@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "err.h"
-#include "fs.h"
+#include <assert.h>
 #include "dvar.h"
 
 # define NO_ADDR ((t_vm_addr) -1)
@@ -123,8 +122,7 @@ static s_bin_builder_ins* bin_builder_addi_(s_bin_builder* b,
    parray_insert_back(b->ins_arr, ins);
    if(label)
    {
-      errAssert(!pmap_contains(b->labels_map, (void*) label),
-                "label %s already defined", label);
+      assert(!pmap_contains(b->labels_map, (void*) label));
       pmap_insert(b->labels_map, (void*) label, &(ins->addr));
    }
    return ins;
@@ -253,8 +251,7 @@ static void write_refs_(s_bin_builder* b, char* buffer, s_parray* labels_refs)
    {
       ref = (s_bin_builder_label_ref*) parray_get(labels_refs, i);
 
-      errAssert(pmap_contains(b->labels_map,(void*) ref->label),
-                "Undefined label: %s\n", ref->label);
+      assert(pmap_contains(b->labels_map,(void*) ref->label));
       t_vm_addr* data = pmap_get(b->labels_map, (void*) ref->label);
       memcpy(buffer + ref->addr, data, sizeof(t_vm_addr));
 
@@ -291,8 +288,7 @@ void bin_builder_add_data(s_bin_builder* b,
 
    if(label)
    {
-      errAssert(!pmap_contains(b->labels_map, (void*) label),
-                "label %s already defined", label);
+      assert(!pmap_contains(b->labels_map, (void*) label));
       pmap_insert(b->labels_map, (void*) label, &(bd->addr));
    }
 }
@@ -828,10 +824,11 @@ void bin_builder_addi_member(s_bin_builder* b, const char* label,
 
 void bin_builder_addi_defclass(s_bin_builder* b, const char* label,
                                const char* nameLabel, t_vm_int len,
-                               t_vm_int id)
+                               t_vm_int id, t_vm_int parent)
 {
-   bin_builder_addia3(b, label, VM_INS_DEFCLASS,
-                      arg_label_(nameLabel), arg_int_(len) ,arg_int_(id));
+   bin_builder_addia4(b, label, VM_INS_DEFCLASS,
+                      arg_label_(nameLabel), arg_int_(len),
+                      arg_int_(id), arg_int_(parent));
 }
 
 void bin_builder_addi_deffield(s_bin_builder* b, const char* label,
@@ -859,6 +856,27 @@ void bin_builder_addi_defend(s_bin_builder* b, const char* label,
 {
       bin_builder_addia1(b, label, VM_INS_DEFEND,
                          arg_int_(id));
+}
+
+void bin_builder_addi_ssuper(s_bin_builder* b, const char* label,
+                             t_vm_saddr dst)
+{
+   bin_builder_addia1(b, label, VM_INS_SSUPER,
+                      arg_saddr_(dst));
+}
+
+void bin_builder_addi_setfscope(s_bin_builder* b, const char* label,
+                                const char* nameLabel, t_vm_int len)
+{
+   bin_builder_addia2(b, label, VM_INS_SETFSCOPE,
+                      arg_label_(nameLabel), arg_int_(len));
+}
+
+void bin_builder_addi_setfline(s_bin_builder* b, const char* label,
+                               t_vm_int line)
+{
+   bin_builder_addia1(b, label, VM_INS_SETFLINE,
+                      arg_int_(line));
 }
 
 void bin_builder_addia0(s_bin_builder* b, const char* label, t_vm_ins code)
@@ -929,7 +947,7 @@ void bin_builder_add_opb(s_bin_builder* b, const char* label, t_vm_ins code,
 
 
 
-void bin_builder_save(s_bin_builder* b, const char* outPath)
+int bin_builder_save(s_bin_builder* b, const char* outPath)
 {
    size_t len = binary_size_(b);
    char* buffer = malloc(len);
@@ -939,12 +957,11 @@ void bin_builder_save(s_bin_builder* b, const char* outPath)
    addr = write_data_(b, buffer);
    addr = write_ins_(b, buffer, addr, labels_refs);
 
-   errAssert((size_t) addr == len,
-             "Unknown error when creating binary file: len = %zu, addr = %zu",
-             len, (size_t) addr);
+   if(((size_t) addr) != len)
+      return 1;
 
-   errAssert(pmap_contains(b->labels_map, (void*) b->start_label),
-             "Undefined start label: %s\n", b->start_label);
+   if(!pmap_contains(b->labels_map, (void*) b->start_label))
+      return 1;
 
    memcpy(buffer, pmap_get(b->labels_map, (void*)b->start_label),
           sizeof(t_vm_addr));
@@ -953,5 +970,14 @@ void bin_builder_save(s_bin_builder* b, const char* outPath)
 
    parray_foreach(labels_refs, free);
    parray_free(labels_refs);
-   fsWriteBytes(outPath, buffer, len);
+
+   FILE* f;
+   if(!(f = fopen(outPath, "wb")))
+      return 1;
+
+   if(fwrite(buffer, 1, len, f) != len)
+      return 1;
+
+   fclose(f);
+   return 0;
 }

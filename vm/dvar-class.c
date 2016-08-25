@@ -105,11 +105,22 @@ void dvar_define_init()
 }
 
 
-void dvar_define_class(const char* name, t_vm_int len, t_vm_int id)
+void dvar_define_class(const char* name, t_vm_int len, t_vm_int id,
+                       t_vm_int parent_id)
 {
    assert(id >= 0 && id < MAX_CLASSES);
    assert(!classes_list_[id]);
+
+   dvar_class* parent = NULL;
+   if(parent_id != DVAR_CLASS_NOPARENT)
+   {
+      assert(parent_id >= 0 && parent_id < MAX_CLASSES);
+      parent = classes_list_[parent_id];
+      assert(parent && parent->defined);
+   }
+
    dvar_class* c = malloc(sizeof(dvar_class));
+   c->parent = parent;
    c->name = strCloneN(name, len);
    c->defined = 0;
    c->id = id;
@@ -156,6 +167,27 @@ void dvar_define_end(t_vm_int class_id)
    assert(class_id >= 0 && class_id < MAX_CLASSES);
    dvar_class* c = classes_list_[class_id];
    assert(c && !c->defined);
+
+   dvar_class* parent = c->parent;
+   if(parent)
+   {
+      s_pmap_node* it = pmap_begin(parent->fields);
+      while(it != pmap_end(parent->fields))
+      {
+         dvar_field* parent_field = it->value;
+         if(pmap_find(c->fields, parent_field->name) == pmap_end(c->fields))
+         {
+            dvar_field* child_field = malloc(sizeof(dvar_field));
+            child_field->name = parent_field->name;
+            child_field->is_static = parent_field->is_static;
+            child_field->type = parent_field->type;
+            child_field->visibility = parent_field->visibility;
+            child_field->value = parent_field->value;
+            pmap_insert(c->fields, parent_field->name, child_field);
+         }
+         it = pmap_next(parent->fields, it);
+      }
+   }
 
    add_default_(class_id, "constructor", VM_SYSCALL_DEFAULT_CONSTRUCTOR);
    add_default_(class_id, "destructor", VM_SYSCALL_DEFAULT_DESTRUCTOR);

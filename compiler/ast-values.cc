@@ -177,3 +177,14 @@ void ASTThis::accept(ASTVisitor& v)
 {
    v.visit(this);
 }
+
+ASTSuper::ASTSuper(Token token)
+   : AST(token)
+{
+   assert(token.isOfType(TokenType::kw_super));
+}
+
+void ASTSuper::accept(ASTVisitor& v)
+{
+   v.visit(this);
+}

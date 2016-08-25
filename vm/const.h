@@ -106,8 +106,11 @@ typedef struct {
 # define VM_INS_DEFFIELD (72)
 # define VM_INS_DEFSFIELD (73)
 # define VM_INS_DEFEND (74)
+# define VM_INS_SSUPER (75)
+# define VM_INS_SETFSCOPE (76)
+# define VM_INS_SETFLINE (77)
 
-# define VM_NB_INS (75)
+# define VM_NB_INS (78)
 
 # define VM_SYSCALL_NO (-1)
 # define VM_SYSCALL_EXIT (0)

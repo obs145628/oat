@@ -74,6 +74,11 @@ void ASTVisitor::visit(ASTThis* e)
    visitDefault(e);
 }
 
+void ASTVisitor::visit(ASTSuper* e)
+{
+   visitDefault(e);
+}
+
 void ASTVisitor::visit(ASTOp1Plus* e)
 {
    visitDefault(e);

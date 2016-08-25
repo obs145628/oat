@@ -4,6 +4,7 @@
 #include "runtime-scope.hh"
 #include "slib.hh"
 #include "logs.hh"
+#include "scanner.hh"
 #include "../vm/dvar.h"
 #include <cassert>
 #include <iostream>
@@ -20,6 +21,25 @@ void ASTVisitorCompile::visitChildren()
    {
       ASTVisitorCompile {child, _builder};
    }
+}
+
+void ASTVisitorCompile::addLineFlag(Token t)
+{
+   if(!DEBUG_FLAGS)
+      return;
+
+   std::string flag = t.getScanner()->getLabel();
+   t_vm_int len = static_cast<t_vm_int> (flag.size());
+   std::string label = _builder->addSharedString(flag);
+   _builder->addiSetfscope(label, len);
+
+    std::size_t line = t.getLine();
+    _builder->addiSetfline(static_cast<t_vm_int>(line));
+}
+
+void ASTVisitorCompile::addLineFlag()
+{
+   addLineFlag(_state->ast()->getToken());
 }
 
 void ASTVisitorCompile::compileCollection(t_vm_ins code)
@@ -229,6 +249,13 @@ void ASTVisitorCompile::visit(ASTThis*)
 {
    t_vm_saddr dst = _state->getVar(0);
    _builder->addiCopy(dst, 0);
+}
+
+void ASTVisitorCompile::visit(ASTSuper*)
+{
+   t_vm_saddr dst = _state->getVar(0);
+   _builder->addiCopy(dst, 0);
+   _builder->addiSsuper(dst);
 }
 
 void ASTVisitorCompile::visit(ASTOp1Plus*)
@@ -568,12 +595,17 @@ void ASTVisitorCompile::visit(ASTOpNew* e)
 
 void ASTVisitorCompile::visit(ASTStatementsBlock*)
 {
-   visitChildren();
+   addLineFlag();
+   for(ASTState* child: _state->children())
+   {
+      addLineFlag(child->ast()->getToken());
+      ASTVisitorCompile {child, _builder};
+   }
 }
 
 void ASTVisitorCompile::visit(ASTStatementEmpty*)
 {
-
+   addLineFlag();
 }
 
 void ASTVisitorCompile::visit(ASTStatementDefine* e)
@@ -581,6 +613,8 @@ void ASTVisitorCompile::visit(ASTStatementDefine* e)
    std::string name = e->getSymbol()->getName();
    t_vm_addr varAddr = _state->scope()->getVar(name).pos;
    t_vm_mode mode = e->isConst() ? DVAR_MCONST : DVAR_MVAR;
+
+   addLineFlag();
 
    if(e->hasValue())
    {
@@ -598,6 +632,8 @@ void ASTVisitorCompile::visit(ASTStatementDefine* e)
 
 void ASTVisitorCompile::visit(ASTStatementReturn* e)
 {
+   addLineFlag();
+
    ASTState* value = _state->getChild(e->getValue());
    ASTVisitorCompile {value, _builder};
    t_vm_addr valAddr = value->getVar(0);
@@ -615,6 +651,8 @@ void ASTVisitorCompile::visit(ASTStatementIf* e)
    std::string endLabel = _builder->getUniqueLabel();
    ASTState* condition = _state->getChild(e->getCondition());
    ASTState* ifBlock = _state->getChild(e->getIfStatement());
+
+   addLineFlag();
 
    ASTVisitorCompile {condition, _builder};
    t_vm_saddr addr = condition->getVar(0);
@@ -638,6 +676,8 @@ void ASTVisitorCompile::visit(ASTStatementWhile* e)
    ASTState* condition = _state->getChild(e->getCondition());
    ASTState* block = _state->getChild(e->getWhileStatement());
    t_vm_saddr temp = _state->getVar(0);
+
+   addLineFlag();
 
    _state->addLabel(conditionLabel);
    _state->addLabel(endLabel);
@@ -665,6 +705,8 @@ void ASTVisitorCompile::visit(ASTStatementDo* e)
    ASTState* block = _state->getChild(e->getDoStatement());
    t_vm_saddr addr = condition->getVar(0);
 
+   addLineFlag();
+
    _state->addLabel(conditionLabel);
    _state->addLabel(endLabel);
 
@@ -691,6 +733,8 @@ void ASTVisitorCompile::visit(ASTStatementFor* e)
    t_vm_saddr temp = _state->getVar(0);
    t_vm_saddr addr = condition->getVar(0);
 
+   addLineFlag();
+
    _state->addLabel(incLabel);
    _state->addLabel(endLabel);
 
@@ -714,6 +758,7 @@ void ASTVisitorCompile::visit(ASTStatementFor* e)
 
 void ASTVisitorCompile::visit(ASTStatementBreak*)
 {
+   addLineFlag();
    ASTState* loop = getParentLoop();
    std::string endLabel = loop->getLabel(1);
    _builder->addiJump(endLabel);
@@ -721,6 +766,7 @@ void ASTVisitorCompile::visit(ASTStatementBreak*)
 
 void ASTVisitorCompile::visit(ASTStatementContinue*)
 {
+   addLineFlag();
    ASTState* loop = getParentLoop();
    std::string conditionLabel = loop->getLabel(0);
    _builder->addiJump(conditionLabel);
@@ -728,6 +774,8 @@ void ASTVisitorCompile::visit(ASTStatementContinue*)
 
 void ASTVisitorCompile::visit(ASTModule*)
 {
+   addLineFlag();
+
    visitChildren();
 
    if(LOG_COMPILE)
@@ -746,6 +794,8 @@ void ASTVisitorCompile::visit(ASTFunctionDef* e)
       std::cout << "compile: function " + name << std::endl;
 
    _builder->addiNop(label);
+
+   addLineFlag();
 
    ASTVisitorCompile {block, _builder};
 
@@ -775,6 +825,9 @@ void ASTVisitorCompile::visit(ASTClassMethod* e)
       std::cout << "compile: method " + name << std::endl;
 
    _builder->addiNop(label);
+
+
+   addLineFlag();
 
    ASTVisitorCompile {block, _builder};
 

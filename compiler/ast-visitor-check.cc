@@ -192,6 +192,26 @@ void ASTVisitorCheck::visit(ASTThis*)
    _state->addVar(_state->frame()->addVar());
 }
 
+void ASTVisitorCheck::visit(ASTSuper*)
+{
+   ASTState* parent = _state->parent();
+   while(parent && parent->type() != ASTType::class_method)
+      parent = parent->parent();
+
+   if(!parent)
+      _state->tokenError("'super' can only be used inside a class method");
+
+   ASTClassMethod* method = dynamic_cast<ASTClassMethod*> (parent->ast());
+   if(method->isStatic())
+      _state->tokenError("'super' can't be used inside a static class method");
+
+   ASTClass* c = dynamic_cast<ASTClass*> (parent->parent()->ast());
+   if(!c->hasParent())
+      _state->tokenError("'super' can't be used inside a not-herited class");
+
+   _state->addVar(_state->frame()->addVar());
+}
+
 void ASTVisitorCheck::visit(ASTOp1Plus*)
 {
    checkOpu();
@@ -546,6 +566,7 @@ void ASTVisitorCheck::visit(ASTStatementContinue*)
 
 void ASTVisitorCheck::visit(ASTModule*)
 {
+   _state->frame()->addVar(); //args
    visitChildren();
 
    t_vm_saddr temp1 = _state->frame()->addVar();
