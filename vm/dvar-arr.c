@@ -5,6 +5,9 @@
 #include "dstr.h"
 #include "hash.h"
 #include "err.h"
+#include "vm-dvar-utils.h"
+#include "dvar-class.h"
+#include "dvar-obj.h"
 
 #define DEFAULT_ALLOC 8
 
@@ -234,5 +237,164 @@ struct dvar* c__arr__to_set(struct dvar* l, t_vm_int n)
 {
    (void) n;
    dvar_putset(l, DVAR_MVAR, l->v_arr->elems, l->v_arr->elems + l->v_arr->len);
+   return l;
+}
+
+
+struct dvar* c__arr__index_of(struct dvar* l, t_vm_int n)
+{
+   if(n < 2)
+      err("array.indexOf: argument expected");
+   dvar* e = l + 1;
+   dvar_arr* arr = l->v_arr;
+   t_vm_int i;
+
+   for(i = 0; i < arr->len; ++i)
+      if(dvar_equals(arr->elems + i, e))
+         break;
+
+   if(i == arr->len)
+      i = -1;
+
+   dvar_putint(l, DVAR_MVAR, i);
+   return l;
+}
+
+struct dvar* c__arr__last_index_of(struct dvar* l, t_vm_int n)
+{
+   if(n < 2)
+      err("array.lastIndexOf: argument expected");
+   dvar* e = l + 1;
+   dvar_arr* arr = l->v_arr;
+   t_vm_int i;
+
+   for(i = arr->len - 1; i >= 0; --i)
+      if(dvar_equals(arr->elems + i, e))
+         break;
+
+   dvar_putint(l, DVAR_MVAR, i);
+   return l;
+}
+
+struct dvar* c__arr__contains(struct dvar* l, t_vm_int n)
+{
+   if(n < 2)
+      err("array.contains: argument expected");
+   dvar* e = l + 1;
+   dvar_arr* arr = l->v_arr;
+   t_vm_int i;
+
+   for(i = 0; i < arr->len; ++i)
+      if(dvar_equals(arr->elems + i, e))
+         break;
+
+   t_vm_bool found = (t_vm_bool) (i != arr->len);
+
+   dvar_putbool(l, DVAR_MVAR, found);
+   return l;
+}
+
+struct dvar* c__arr__it(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   dvar temp;
+   dvar_init(&temp);
+   dvar_obj_build(&temp, VM_CLASS_ARRAY_ITERATOR, l, l + 1);
+   dvar_move(l, &temp);
+   return l;
+}
+
+
+
+void dvar_array_iterator_init()
+{
+   vm_define_begin(VM_CLASS_ARRAY_ITERATOR, "ArrayIterator",
+                   DVAR_CLASS_NOPARENT);
+   vm_define_method("constructor", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_ARRAY_ITERATOR_CONSTRUCTOR);
+   vm_define_method("destructor", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_ARRAY_ITERATOR_DESTRUCTOR);
+   vm_define_method("isEnd", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_ARRAY_ITERATOR_IS_END);
+   vm_define_method("next", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_ARRAY_ITERATOR_NEXT);
+   vm_define_method("getKey", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_ARRAY_ITERATOR_GET_KEY);
+   vm_define_method("getValue", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_ARRAY_ITERATOR_GET_VALUE);
+
+   vm_define_end_();
+}
+
+typedef struct {
+   dvar_arr* arr;
+   t_vm_int pos;
+} s_array_it_;
+
+struct dvar* c__array_iterator__constructor(struct dvar* l, t_vm_int n)
+{
+   dvar_obj_val* o = l->v_obj->val;
+
+   if(n < 2)
+      err("ArrayIterator.constructor: expected 1 argument");
+
+   dvar* a1 = l + 1;
+   if(a1->type != DVAR_TARR)
+      err("ArrayIterator.constructor: first argument must be an array");
+
+   s_array_it_* it = malloc(sizeof(s_array_it_));
+   it->arr =a1->v_arr;
+   it->pos = 0;
+
+   o->extra = it;
+   return l;
+}
+
+struct dvar* c__array_iterator__destructor(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   free(l->v_obj->val->extra);
+   return l;
+}
+
+struct dvar* c__array_iterator__is_end(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_array_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->pos < 0 || it->pos >= it->arr->len;
+   dvar_putbool(l, DVAR_MVAR, end);
+   return l;
+}
+
+struct dvar* c__array_iterator__next(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_array_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->pos < 0 || it->pos >= it->arr->len;
+   if(end)
+      err("ArrayIterator.next(): unable to move end iterator");
+   ++it->pos;
+   return l;
+}
+
+struct dvar* c__array_iterator__get_key(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_array_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->pos < 0 || it->pos >= it->arr->len;
+   if(end)
+      err("ArrayIterator.getKey(): iterator is end");
+   dvar_putint(l, DVAR_MVAR, it->pos);
+   return l;
+}
+
+struct dvar* c__array_iterator__get_value(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_array_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->pos < 0 || it->pos >= it->arr->len;
+   if(end)
+      err("ArrayIterator.getValue(): iterator is end");
+   dvar_copy(l, it->arr->elems + it->pos);
    return l;
 }

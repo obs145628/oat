@@ -8,6 +8,9 @@
 #include "hash.h"
 #include "dstr.h"
 #include "err.h"
+#include "dvar-obj.h"
+#include "dvar-class.h"
+#include "vm-dvar-utils.h"
 
 #define HMAP_SIZE (512)
 
@@ -256,5 +259,111 @@ struct dvar* c__map__values(struct dvar* l, t_vm_int n)
    }
 
    dvar_move(l, &temp);
+   return l;
+}
+
+
+struct dvar* c__map__it(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   dvar temp;
+   dvar_init(&temp);
+   dvar_obj_build(&temp, VM_CLASS_MAP_ITERATOR, l, l + 1);
+   dvar_move(l, &temp);
+   return l;
+}
+
+
+
+void dvar_map_iterator_init()
+{
+   vm_define_begin(VM_CLASS_MAP_ITERATOR, "MapIterator",
+                   DVAR_CLASS_NOPARENT);
+   vm_define_method("constructor", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_MAP_ITERATOR_CONSTRUCTOR);
+   vm_define_method("destructor", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_MAP_ITERATOR_DESTRUCTOR);
+   vm_define_method("isEnd", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_MAP_ITERATOR_IS_END);
+   vm_define_method("next", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_MAP_ITERATOR_NEXT);
+   vm_define_method("getKey", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_MAP_ITERATOR_GET_KEY);
+   vm_define_method("getValue", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_MAP_ITERATOR_GET_VALUE);
+
+   vm_define_end_();
+}
+
+typedef struct {
+   s_phtable* map;
+   s_phtable_node* node;
+} s_map_it_;
+
+struct dvar* c__map_iterator__constructor(struct dvar* l, t_vm_int n)
+{
+   dvar_obj_val* o = l->v_obj->val;
+
+   if(n < 2)
+      err("MapIterator.constructor: expected 1 argument");
+
+   dvar* a1 = l + 1;
+   if(a1->type != DVAR_TMAP)
+      err("MapIterator.constructor: first argument must be a map");
+
+   s_map_it_* it = malloc(sizeof(s_map_it_));
+   it->map =a1->v_map->hmap;
+   it->node = phtable_begin(it->map);
+
+   o->extra = it;
+   return l;
+}
+
+struct dvar* c__map_iterator__destructor(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   free(l->v_obj->val->extra);
+   return l;
+}
+
+struct dvar* c__map_iterator__is_end(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_map_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->node == PHTABLE_END;
+   dvar_putbool(l, DVAR_MVAR, end);
+   return l;
+}
+
+struct dvar* c__map_iterator__next(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_map_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->node == PHTABLE_END;
+   if(end)
+      err("MapIterator.next(): unable to move end iterator");
+   it->node = phtable_next(it->map, it->node);
+   return l;
+}
+
+struct dvar* c__map_iterator__get_key(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_map_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->node == PHTABLE_END;
+   if(end)
+      err("MapIterator.getKey(): iterator is end");
+   dvar_copy(l, it->node->key);
+   return l;
+}
+
+struct dvar* c__map_iterator__get_value(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_map_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->node == PHTABLE_END;
+   if(end)
+      err("MapIterator.getValue(): iterator is end");
+   dvar_copy(l, it->node->value);
    return l;
 }

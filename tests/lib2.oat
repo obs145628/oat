@@ -1,0 +1,9 @@
+export forEach(data, cb)
+{
+  let it = data.it();
+  while(!it.isEnd())
+  {
+    cb(it.getValue(), it.getKey());
+    it.next();
+  }
+}

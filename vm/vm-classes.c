@@ -3,8 +3,12 @@
 #include "dvar.h"
 #include "dvar-class.h"
 #include "dvar-obj.h"
+#include "dvar-arr.h"
+#include "dvar-set.h"
+#include "dvar-map.h"
 #include "err.h"
 #include "dvar-date.h"
+#include "dvar-random-generator.h"
 
 
 
@@ -207,4 +211,8 @@ void vm_classes_init()
    define_rect_();
 
    dvar_date_init();
+   dvar_array_iterator_init();
+   dvar_set_iterator_init();
+   dvar_map_iterator_init();
+   dvar_random_generator_init();
 }

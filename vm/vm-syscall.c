@@ -15,7 +15,13 @@
 #include "dvar-arr.h"
 #include "dvar-set.h"
 #include "dvar-map.h"
+#include "dvar-obj.h"
+#include "dvar-class.h"
 #include "dvar-date.h"
+#include "dvar.h"
+#include "dvar-maths.h"
+#include "dvar-random-generator.h"
+#include "dvar-io.h"
 
 typedef dvar* (*f_syscall_)(dvar* argv, t_vm_int argc);
 
@@ -77,6 +83,139 @@ static dvar* syscall_default_destructor_(dvar* v, t_vm_int argc)
 {
    (void) argc;
    return v;
+}
+
+static dvar* syscall_typename_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("typename(): argument expected");
+
+   const char* t = dvar_typename(l);
+   dvar_putstring(l, DVAR_MVAR, t, strlen(t));
+   return l;
+}
+
+static dvar* syscall_is_null_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isNull(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TNULL);
+   return l;
+}
+
+static dvar* syscall_is_int_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isInt(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TINT);
+   return l;
+}
+
+static dvar* syscall_is_double_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isDouble(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TDOUBLE);
+   return l;
+}
+
+static dvar* syscall_is_char_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isChar(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TCHAR);
+   return l;
+}
+
+static dvar* syscall_is_bool_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isBool(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TBOOL);
+   return l;
+}
+
+static dvar* syscall_is_string_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isString(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TSTR);
+   return l;
+}
+
+static dvar* syscall_is_function_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isFunction(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TFUN);
+   return l;
+}
+
+static dvar* syscall_is_array_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isArray(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TARR);
+   return l;
+}
+
+static dvar* syscall_is_set_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isSet(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TSET);
+   return l;
+}
+
+static dvar* syscall_is_map_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isMap(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TMAP);
+   return l;
+}
+
+static dvar* syscall_is_object_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isObject(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TOBJ);
+   return l;
+}
+
+static dvar* syscall_is_class_(dvar* l, t_vm_int n)
+{
+   if(n < 1)
+      err("isClass(): argument expected");
+
+   dvar_putbool(l, DVAR_MVAR, l->type == DVAR_TCLASS);
+   return l;
+}
+
+static dvar* syscall_is_instance_of_(dvar* l, t_vm_int n)
+{
+   if(n < 2)
+      err("isInstanceOf(): too few arguments");
+
+   if(l->type != DVAR_TCLASS)
+      err("isInstanceof(): first argument must be a class");
+
+   dvar* o = l + 1;
+
+   dvar_putbool(l, DVAR_MVAR, o->type == DVAR_TOBJ
+                && o->v_obj->val->c == l->v_class);
+   return l;
 }
 
 
@@ -151,6 +290,90 @@ dvar* vm_syscall_exec(t_vm_int syscall, dvar* argv, t_vm_int argc)
       c__map__keys,
       c__map__values,
       c__date__now,
+
+      syscall_typename_,
+      syscall_is_null_,
+      syscall_is_int_,
+      syscall_is_double_,
+      syscall_is_char_,
+      syscall_is_bool_,
+      syscall_is_string_,
+      syscall_is_function_,
+      syscall_is_array_,
+      syscall_is_set_,
+      syscall_is_map_,
+      syscall_is_object_,
+      syscall_is_class_,
+      syscall_is_instance_of_,
+
+      c__str__index_of,
+      c__str__last_index_of,
+      c__str__contains,
+      c__str__replace,
+      c__arr__index_of,
+      c__arr__last_index_of,
+      c__arr__contains,
+
+      c__array_iterator__constructor,
+      c__array_iterator__destructor,
+      c__array_iterator__is_end,
+      c__array_iterator__next,
+      c__array_iterator__get_key,
+      c__array_iterator__get_value,
+      c__arr__it,
+
+      c__set_iterator__constructor,
+      c__set_iterator__destructor,
+      c__set_iterator__is_end,
+      c__set_iterator__next,
+      c__set_iterator__get_key,
+      c__set_iterator__get_value,
+      c__set__it,
+
+      c__map_iterator__constructor,
+      c__map_iterator__destructor,
+      c__map_iterator__is_end,
+      c__map_iterator__next,
+      c__map_iterator__get_key,
+      c__map_iterator__get_value,
+      c__map__it,
+
+      syscall_min,
+      syscall_max,
+      syscall_abs,
+      syscall_round,
+      syscall_floor,
+      syscall_ceil,
+      syscall_fmod,
+      syscall_exp,
+      syscall_log,
+      syscall_pow,
+      syscall_sqrt,
+      syscall_sin,
+      syscall_cos,
+      syscall_tan,
+      syscall_asin,
+      syscall_acos,
+      syscall_atan,
+      syscall_sinh,
+      syscall_cosh,
+      syscall_tanh,
+      syscall_asinh,
+      syscall_acosh,
+      syscall_atanh,
+
+      c__random_generator__constructor,
+      c__random_generator__destructor,
+      c__random_generator__get_bool,
+      c__random_generator__get_int,
+      c__random_generator__get_double,
+      c__random_generator__get_char,
+
+      syscall_prompt_line,
+      syscall_prompt_int,
+      syscall_prompt_double,
+      syscall_prompt_char,
+      syscall_prompt_bool,
    };
 
    assert(syscall >= 0 && syscall < VM_NB_SYSCALL);

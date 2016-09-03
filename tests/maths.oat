@@ -1,3 +1,1 @@
-export abs(x) => x > 0 ? x : -x;
-
 export fact(x) => x <= 1 ? 1 : x * fact(x-1);

@@ -1,8 +1,10 @@
 #include "dvar-str.h"
 #include "dvar.h"
 #include <stdlib.h>
+#include <string.h>
 #include "err.h"
 #include "numbers.h"
+#include "str.h"
 
 
 dvar_str* dvar_str_new(const char* str, t_vm_int len)
@@ -199,5 +201,88 @@ struct dvar* c__str__to_double(struct dvar* l, t_vm_int n)
 
    dvar_putdouble(l, DVAR_MVAR, (t_vm_double) res);
    free(str);
+   return l;
+}
+
+
+struct dvar* c__str__index_of(struct dvar* l, t_vm_int n)
+{
+   if(n < 2)
+      err("string.indexOf: argument expected");
+
+   dvar* sub = l + 1;
+
+   if(!dvar_cast_to(sub, DVAR_TSTR))
+      err("string.indexOf: argument must be a string");
+
+   char *s1 = dvar_str_to_string(l->v_str);
+   char *s2 = dvar_str_to_string(sub->v_str);
+   size_t pos = strIndexOf(s1, s2);
+   free(s1);
+   free(s2);
+   dvar_putint(l, DVAR_MVAR, pos == STR_NFOUND ? -1: (t_vm_int) pos);
+   return l;
+}
+
+struct dvar* c__str__last_index_of(struct dvar* l, t_vm_int n)
+{
+   if(n < 2)
+      err("string.lastIndexOf: argument expected");
+
+   dvar* sub = l + 1;
+
+   if(!dvar_cast_to(sub, DVAR_TSTR))
+      err("string.lastIndexOf: argument must be a string");
+
+   char *s1 = dvar_str_to_string(l->v_str);
+   char *s2 = dvar_str_to_string(sub->v_str);
+   size_t pos = strLastIndexOf(s1, s2);
+   free(s1);
+   free(s2);
+   dvar_putint(l, DVAR_MVAR, pos == STR_NFOUND ? -1: (t_vm_int) pos);
+   return l;
+}
+
+struct dvar* c__str__contains(struct dvar* l, t_vm_int n)
+{
+   if(n < 2)
+      err("string.contains: argument expected");
+
+   dvar* sub = l + 1;
+
+   if(!dvar_cast_to(sub, DVAR_TSTR))
+      err("string.contains: argument must be a string");
+
+   char *s1 = dvar_str_to_string(l->v_str);
+   char *s2 = dvar_str_to_string(sub->v_str);
+   t_vm_bool res = (t_vm_bool) strContains(s1, s2);
+   free(s1);
+   free(s2);
+   dvar_putbool(l, DVAR_MVAR, res);
+   return l;
+}
+
+struct dvar* c__str__replace(struct dvar* l, t_vm_int n)
+{
+   if(n < 3)
+      err("string.replace: 2 arguments expected");
+
+   dvar* sub = l + 1;
+   dvar* rep = l + 2;
+
+   if(!dvar_cast_to(sub, DVAR_TSTR))
+      err("string.replace: first argument must be a string");
+   if(!dvar_cast_to(rep, DVAR_TSTR))
+      err("string.replace: second argument must be a string");
+
+   char *s1 = dvar_str_to_string(l->v_str);
+   char *s2 = dvar_str_to_string(sub->v_str);
+   char *s3 = dvar_str_to_string(rep->v_str);
+   char* res = strReplace(s1, s2, s3);
+   dvar_putstring(l, DVAR_MVAR, res, strlen(res));
+   free(s1);
+   free(s2);
+   free(s3);
+   free(res);
    return l;
 }

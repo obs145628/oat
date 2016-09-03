@@ -6,6 +6,9 @@
 #include "hash.h"
 #include "dstr.h"
 #include "err.h"
+#include "dvar-obj.h"
+#include "dvar-class.h"
+#include "vm-dvar-utils.h"
 
 #define HSET_SIZE (512)
 
@@ -189,5 +192,111 @@ struct dvar* c__set__to_array(struct dvar* l, t_vm_int n)
    }
 
    dvar_move(l, &temp);
+   return l;
+}
+
+
+struct dvar* c__set__it(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   dvar temp;
+   dvar_init(&temp);
+   dvar_obj_build(&temp, VM_CLASS_SET_ITERATOR, l, l + 1);
+   dvar_move(l, &temp);
+   return l;
+}
+
+
+
+void dvar_set_iterator_init()
+{
+   vm_define_begin(VM_CLASS_SET_ITERATOR, "SetIterator",
+                   DVAR_CLASS_NOPARENT);
+   vm_define_method("constructor", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_SET_ITERATOR_CONSTRUCTOR);
+   vm_define_method("destructor", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_SET_ITERATOR_DESTRUCTOR);
+   vm_define_method("isEnd", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_SET_ITERATOR_IS_END);
+   vm_define_method("next", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_SET_ITERATOR_NEXT);
+   vm_define_method("getKey", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_SET_ITERATOR_GET_KEY);
+   vm_define_method("getValue", DVAR_CLASS_VPUBLIC, FALSE,
+                    VM_SYSCALL_SET_ITERATOR_GET_VALUE);
+
+   vm_define_end_();
+}
+
+typedef struct {
+   s_phset* set;
+   s_phset_node* node;
+} s_set_it_;
+
+struct dvar* c__set_iterator__constructor(struct dvar* l, t_vm_int n)
+{
+   dvar_obj_val* o = l->v_obj->val;
+
+   if(n < 2)
+      err("SetIterator.constructor: expected 1 argument");
+
+   dvar* a1 = l + 1;
+   if(a1->type != DVAR_TSET)
+      err("SetIterator.constructor: first argument must be a set");
+
+   s_set_it_* it = malloc(sizeof(s_set_it_));
+   it->set =a1->v_set->hset;
+   it->node = phset_begin(it->set);
+
+   o->extra = it;
+   return l;
+}
+
+struct dvar* c__set_iterator__destructor(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   free(l->v_obj->val->extra);
+   return l;
+}
+
+struct dvar* c__set_iterator__is_end(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_set_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->node == PHSET_END;
+   dvar_putbool(l, DVAR_MVAR, end);
+   return l;
+}
+
+struct dvar* c__set_iterator__next(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_set_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->node == PHSET_END;
+   if(end)
+      err("SetIterator.next(): unable to move end iterator");
+   it->node = phset_next(it->set, it->node);
+   return l;
+}
+
+struct dvar* c__set_iterator__get_key(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_set_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->node == PHSET_END;
+   if(end)
+      err("SetIterator.getKey(): iterator is end");
+   dvar_putnull(l, DVAR_MVAR);
+   return l;
+}
+
+struct dvar* c__set_iterator__get_value(struct dvar* l, t_vm_int n)
+{
+   (void) n;
+   s_set_it_* it = l->v_obj->val->extra;
+   t_vm_bool end = it->node == PHSET_END;
+   if(end)
+      err("SetIterator.getValue(): iterator is end");
+   dvar_copy(l, it->node->key);
    return l;
 }

@@ -40,5 +40,16 @@ struct dvar* c__set__contains(struct dvar* l, t_vm_int n);
 struct dvar* c__set__insert(struct dvar* l, t_vm_int n);
 struct dvar* c__set__remove(struct dvar* l, t_vm_int n);
 struct dvar* c__set__to_array(struct dvar* l, t_vm_int n);
+struct dvar* c__set__it(struct dvar* l, t_vm_int n);
+
+
+void dvar_set_iterator_init();
+
+struct dvar* c__set_iterator__constructor(struct dvar* l, t_vm_int n);
+struct dvar* c__set_iterator__destructor(struct dvar* l, t_vm_int n);
+struct dvar* c__set_iterator__is_end(struct dvar* l, t_vm_int n);
+struct dvar* c__set_iterator__next(struct dvar* l, t_vm_int n);
+struct dvar* c__set_iterator__get_key(struct dvar* l, t_vm_int n);
+struct dvar* c__set_iterator__get_value(struct dvar* l, t_vm_int n);
 
 # endif //!DVAR_SET_H_

@@ -13,8 +13,6 @@
 
 dvar_obj* dvar_obj_new(t_vm_int id)
 {
-
-
    dvar_obj_val* o = malloc(sizeof(dvar_obj_val));
    o->c = dvar_class_new(id);
    o->refs = 1;
@@ -201,4 +199,15 @@ t_vm_bool dvar_obj_has(const dvar_obj_val* o, const char* name)
    dvar_class* c = o->c;
    s_pmap_node* it = pmap_find(c->fields, (void*) name);
    return it != pmap_end(c->fields);
+}
+
+void dvar_obj_build(struct dvar* dst, const t_vm_int id,
+                    const struct dvar* begin, const struct dvar* end)
+{
+   dvar temp;
+   dvar_init(&temp);
+
+   dvar_putobj(dst, DVAR_MVAR, id);
+   dvar_obj_call(dst, "constructor", begin, end, &temp);
+   dvar_clear(&temp);
 }

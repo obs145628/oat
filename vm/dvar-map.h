@@ -43,6 +43,17 @@ struct dvar* c__map__contains(struct dvar* l, t_vm_int n);
 struct dvar* c__map__remove(struct dvar* l, t_vm_int n);
 struct dvar* c__map__keys(struct dvar* l, t_vm_int n);
 struct dvar* c__map__values(struct dvar* l, t_vm_int n);
+struct dvar* c__map__it(struct dvar* l, t_vm_int n);
+
+
+void dvar_map_iterator_init();
+
+struct dvar* c__map_iterator__constructor(struct dvar* l, t_vm_int n);
+struct dvar* c__map_iterator__destructor(struct dvar* l, t_vm_int n);
+struct dvar* c__map_iterator__is_end(struct dvar* l, t_vm_int n);
+struct dvar* c__map_iterator__next(struct dvar* l, t_vm_int n);
+struct dvar* c__map_iterator__get_key(struct dvar* l, t_vm_int n);
+struct dvar* c__map_iterator__get_value(struct dvar* l, t_vm_int n);
 
 
 #endif //!DVAR_MAP_H_

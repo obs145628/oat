@@ -165,6 +165,8 @@ t_vm_char dvar_get_char(const dvar* v, const char* message);
 t_vm_bool dvar_get_bool(const dvar* v, const char* message);
 char* dvar_get_str(const dvar* v, const char* message);
 
+const char* dvar_typename(const dvar* v);
+
 void dvar_type_init_null();
 void dvar_type_init_int();
 void dvar_type_init_double();

@@ -12,8 +12,6 @@
 #include "path.h"
 #include "str.h"
 
-# define BIN "/home/obs/it/oat/tests/main.oatbin"
-
 int main(int argc, char** argv)
 {
 

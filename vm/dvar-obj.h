@@ -46,6 +46,9 @@ void dvar_obj_call(const struct dvar* v, const char* name,
 
 t_vm_bool dvar_obj_has(const dvar_obj_val* o, const char* name);
 
+void dvar_obj_build(struct dvar* dst, const t_vm_int id,
+                    const struct dvar* begin, const struct dvar* end);
+
 
 
 #endif //!DVAR_OBJ_H_

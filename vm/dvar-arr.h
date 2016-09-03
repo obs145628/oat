@@ -39,5 +39,19 @@ struct dvar* c__arr__pop_front(struct dvar* l, t_vm_int n);
 struct dvar* c__arr__pop_back(struct dvar* l, t_vm_int n);
 struct dvar* c__arr__remove(struct dvar* l, t_vm_int n);
 struct dvar* c__arr__to_set(struct dvar* l, t_vm_int n);
+struct dvar* c__arr__index_of(struct dvar* l, t_vm_int n);
+struct dvar* c__arr__last_index_of(struct dvar* l, t_vm_int n);
+struct dvar* c__arr__contains(struct dvar* l, t_vm_int n);
+struct dvar* c__arr__it(struct dvar* l, t_vm_int n);
+
+
+void dvar_array_iterator_init();
+
+struct dvar* c__array_iterator__constructor(struct dvar* l, t_vm_int n);
+struct dvar* c__array_iterator__destructor(struct dvar* l, t_vm_int n);
+struct dvar* c__array_iterator__is_end(struct dvar* l, t_vm_int n);
+struct dvar* c__array_iterator__next(struct dvar* l, t_vm_int n);
+struct dvar* c__array_iterator__get_key(struct dvar* l, t_vm_int n);
+struct dvar* c__array_iterator__get_value(struct dvar* l, t_vm_int n);
 
 #endif //!DVAR_ARR_

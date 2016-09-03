@@ -218,3 +218,115 @@ char* strFromFloat(double x)
    ioWriteFloat(dstrWriter(&ds), x);
    return ds.s;
 }
+
+size_t strIndexOf(const char* str, const char* sub)
+{
+   size_t n = strlen(str);
+   size_t m = strlen(sub);
+
+   if(m > n)
+      return STR_NFOUND;
+
+   for(size_t i = 0; i <= n - m; ++i)
+   {
+      int equals = 1;
+      for(size_t j = 0; j < m; ++j)
+      {
+         if(str[j] != sub[j])
+         {
+            equals = 0;
+            break;
+         }
+      }
+      if(equals)
+         return i;
+      ++str;
+   }
+
+   return STR_NFOUND;
+}
+
+size_t strLastIndexOf(const char* str, const char* sub)
+{
+   size_t n = strlen(str);
+   size_t m = strlen(sub);
+
+   if(m > n)
+      return STR_NFOUND;
+
+   str += n - m;
+
+   for(size_t i = n - m; i < n; --i)
+   {
+      int equals = 1;
+      for(size_t j = 0; j < m; ++j)
+      {
+         if(str[j] != sub[j])
+         {
+            equals = 0;
+            break;
+         }
+      }
+      if(equals)
+         return i;
+      --str;
+   }
+
+   return STR_NFOUND;
+}
+
+int strContains(const char* str, const char* sub)
+{
+   return strIndexOf(str, sub) != STR_NFOUND;
+}
+
+char* strReplace(const char* str, const char* sub, const char* rep)
+{
+   dstr ds;
+   dstr_init(&ds);
+   size_t n = strlen(str);
+   size_t m = strlen(sub);
+   size_t p = strlen(rep);
+
+   if(m > n)
+      return strClone(str);
+
+   size_t i;
+   for(i = 0; i <= n - m; ++i)
+   {
+      int equals = 1;
+      for(size_t j = 0; j < m; ++j)
+      {
+         if(str[j] != sub[j])
+         {
+            equals = 0;
+            break;
+         }
+      }
+
+      if(equals)
+      {
+         dstr_append(&ds, rep, p);
+      }
+      else
+      {
+         dstr_append(&ds, str, 1);
+      }
+      ++str;
+   }
+
+   dstr_append(&ds, str, n - i);
+   return ds.s;
+}
+
+int strCmpIgnoreCase(const char* s1, const char* s2)
+{
+   while(*s1 != '\0' || *s2 != '\0')
+   {
+      int diff = toupper(*(s1++)) - toupper(*(s2++));
+      if(diff)
+         return diff;
+   }
+
+   return 0;
+}

@@ -215,12 +215,12 @@ static char* to_str_null_(const dvar* v)
 
 static char* to_str_int_(const dvar* v)
 {
-   return intToStr((long) v->v_int);
+   return longToStr((long) v->v_int);
 }
 
 static char* to_str_double_(const dvar* v)
 {
-   return floatToStr((double) v->v_double);
+   return doubleToStr((double) v->v_double);
 }
 
 static char* to_str_char_(const dvar* v)
@@ -851,7 +851,7 @@ static void cast_int_to_bool_(dvar* v)
 
 static void cast_int_to_str_(dvar* v)
 {
-   char* x = intToStr((long) (v->v_int));
+   char* x = longToStr((long) (v->v_int));
    free_content_(v);
    set_str_c_(v, x, (t_vm_int) strlen(x));
    free(x);
@@ -880,7 +880,7 @@ static void cast_double_to_bool_(dvar* v)
 
 static void cast_double_to_str_(dvar* v)
 {
-   char* x = floatToStr((double) (v->v_double));
+   char* x = longToStr((double) (v->v_double));
    free_content_(v);
    set_str_c_(v, x, (t_vm_int) strlen(x));
    free(x);
@@ -949,7 +949,7 @@ static void cast_str_to_int_(dvar* v)
 {
    char* str = to_str_(v);
    int ok;
-   t_vm_int x = (t_vm_int) (strToInt(str, &ok));
+   t_vm_int x = (t_vm_int) (strToLong(str, &ok));
    if(!ok)
       err("Unable to cast str to int, str = '%s'", str);
    free(str);
@@ -962,7 +962,7 @@ static void cast_str_to_double_(dvar* v)
 {
    char* str = to_str_(v);
    int ok;
-   t_vm_double x = (t_vm_double) (strToFloat(str, &ok));
+   t_vm_double x = (t_vm_double) (strToDouble(str, &ok));
    if(!ok)
       err("Unable to cast str to double, str = '%s'", str);
    free(str);
@@ -1634,7 +1634,7 @@ t_vm_bool dvar_cast_to(dvar* v, t_vm_type type)
    resolve_ref_((const dvar**)&v);
 
    if(v->type == type)
-      return FALSE;
+      return TRUE;
 
    if(!has_implicit_cast_(v->type, type))
       return FALSE;
@@ -3743,6 +3743,15 @@ char* dvar_get_str(const dvar* v, const char* message)
    return res;
 }
 
+const char* dvar_typename(const dvar* v)
+{
+   resolve_ref_(&v);
+   if(v->type == DVAR_TOBJ)
+      return v->v_obj->val->c->name;
+   else
+      return type_to_cstr_(v->type);
+}
+
 void dvar_type_init_null()
 {
    members_null_ = pmap_new((f_pmap_cmp) strcmp);
@@ -3805,6 +3814,14 @@ void dvar_type_init_str()
                get_sys_member_(VM_SYSCALL_STR_IS_DOUBLE));
    pmap_insert(members_str_, "toDouble",
                get_sys_member_(VM_SYSCALL_STR_TO_DOUBLE));
+   pmap_insert(members_str_, "indexOf",
+               get_sys_member_(VM_SYSCALL_STR_INDEX_OF));
+   pmap_insert(members_str_, "lastIndexOf",
+               get_sys_member_(VM_SYSCALL_STR_LAST_INDEX_OF));
+   pmap_insert(members_str_, "contains",
+               get_sys_member_(VM_SYSCALL_STR_CONTAINS));
+   pmap_insert(members_str_, "replace",
+               get_sys_member_(VM_SYSCALL_STR_REPLACE));
 }
 
 void dvar_type_init_fun()
@@ -3841,6 +3858,14 @@ void dvar_type_init_arr()
                get_sys_member_(VM_SYSCALL_ARR_REMOVE));
    pmap_insert(members_arr_, "toSet",
                get_sys_member_(VM_SYSCALL_ARR_TO_SET));
+   pmap_insert(members_arr_, "indexOf",
+               get_sys_member_(VM_SYSCALL_ARR_INDEX_OF));
+   pmap_insert(members_arr_, "lastIndexOf",
+               get_sys_member_(VM_SYSCALL_ARR_LAST_INDEX_OF));
+   pmap_insert(members_arr_, "contains",
+               get_sys_member_(VM_SYSCALL_ARR_CONTAINS));
+   pmap_insert(members_arr_, "it",
+               get_sys_member_(VM_SYSCALL_ARR_IT));
 }
 
 void dvar_type_init_set()
@@ -3860,6 +3885,8 @@ void dvar_type_init_set()
                get_sys_member_(VM_SYSCALL_SET_REMOVE));
    pmap_insert(members_set_, "toArray",
                get_sys_member_(VM_SYSCALL_SET_TO_ARRAY));
+   pmap_insert(members_set_, "it",
+               get_sys_member_(VM_SYSCALL_SET_IT));
 }
 
 void dvar_type_init_map()
@@ -3879,6 +3906,8 @@ void dvar_type_init_map()
                get_sys_member_(VM_SYSCALL_MAP_KEYS));
    pmap_insert(members_map_, "values",
                get_sys_member_(VM_SYSCALL_MAP_VALUES));
+   pmap_insert(members_map_, "it",
+               get_sys_member_(VM_SYSCALL_MAP_IT));
 }
 
 

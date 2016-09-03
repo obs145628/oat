@@ -104,6 +104,31 @@ char* strFromInt(long x);
 char* strFromFloat(double x);
 
 
+/**
+ * Returns the starting position of sub in str, or STR_NFOUND
+ */
+size_t strIndexOf(const char* str, const char* sub);
 
+/**
+ * Returns the starting position of sub in str, or STR_NFOUND
+ * Starting from the end
+ */
+size_t strLastIndexOf(const char* str, const char* sub);
+
+/**
+ * Indicates if sub ia a substring of str
+ */
+int strContains(const char* str, const char* sub);
+
+/**
+ * Allocates and returns a new string with the content of str.
+ * all instances of sub are replaced by rep
+ */
+char* strReplace(const char* str, const char* sub, const char* rep);
+
+/**
+ *  Compare two strings, ignoring character case
+ */
+int strCmpIgnoreCase(const char* s1, const char* s2);
 
 #endif //!STR_H_

@@ -758,8 +758,8 @@ static json* json_read_rec(ioRead_f reader, size_t* row, size_t* col,
 
       buffer[len] = '\0';
       int ok;
-      json* j = dot ? json_new_real(strToFloat(buffer, &ok))
-         : json_new_int(strToInt(buffer, &ok));
+      json* j = dot ? json_new_real(strToDouble(buffer, &ok))
+         : json_new_int(strToLong(buffer, &ok));
       if(!ok)
          read_error(row, col);
 

@@ -32,5 +32,9 @@ struct dvar* c__str__is_int(struct dvar* l, t_vm_int n);
 struct dvar* c__str__to_int(struct dvar* l, t_vm_int n);
 struct dvar* c__str__is_double(struct dvar* l, t_vm_int n);
 struct dvar* c__str__to_double(struct dvar* l, t_vm_int n);
+struct dvar* c__str__index_of(struct dvar* l, t_vm_int n);
+struct dvar* c__str__last_index_of(struct dvar* l, t_vm_int n);
+struct dvar* c__str__contains(struct dvar* l, t_vm_int n);
+struct dvar* c__str__replace(struct dvar* l, t_vm_int n);
 
 #endif //!DVAR_STR_H_
