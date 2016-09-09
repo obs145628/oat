@@ -47,4 +47,18 @@ int tcp_socket_read_string(s_tcp_socket* s, char** out);
  */
 int tcp_socket_write_string(s_tcp_socket* s, const char* str);
 
+/**
+ * Try to read a string from the socket, until found limit string
+ * Returns -1 in case of error or eof
+ * Returns the numbers of bytes in case of success
+ */
+int tcp_socket_read_until(s_tcp_socket* s, const char* limit, char** out);
+
+/**
+ * Read all data until the socket is closed
+ * Returns -1 in case of error
+ * Returns the number of bytes read in cases of success
+ */
+int tcp_socket_read_all(s_tcp_socket* s, char** out);
+
 #endif //!TCP_SOCKET_H_

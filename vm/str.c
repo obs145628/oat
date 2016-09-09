@@ -321,12 +321,8 @@ char* strReplace(const char* str, const char* sub, const char* rep)
 
 int strCmpIgnoreCase(const char* s1, const char* s2)
 {
-   while(*s1 != '\0' || *s2 != '\0')
-   {
-      int diff = toupper(*(s1++)) - toupper(*(s2++));
-      if(diff)
-         return diff;
-   }
-
-   return 0;
+   while(*s1 && (toupper(*s1) == toupper(*s2)))
+      ++s1, ++s2;
+   return toupper(*(const unsigned char*) s1)
+      - toupper(*(const unsigned char*) s2);
 }

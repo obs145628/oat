@@ -7,13 +7,14 @@ struct tcp_socket;
 typedef struct {
    struct tcp_socket* s;
    int sock;
+   const char* host;
    int port;
    char portBuffer[10];
    struct addrinfo* info;
 } s_tcp_client;
 
 s_tcp_client* tcp_client_new(const char* host, int port);
-int tcp_client_connect(s_tcp_client* client);
+void tcp_client_connect(s_tcp_client* client);
 void tcp_client_free(s_tcp_client* client);
 
 

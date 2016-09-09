@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "tcp-socket.h"
+#include "err.h"
 
 s_tcp_client* tcp_client_new(const char* host, int port)
 {
@@ -20,6 +21,7 @@ s_tcp_client* tcp_client_new(const char* host, int port)
    struct addrinfo hints;
 
    client = malloc(sizeof(s_tcp_client));
+   client->host = host;
    client->port = port;
 
    memset(&hints, 0, sizeof(hints));
@@ -28,29 +30,21 @@ s_tcp_client* tcp_client_new(const char* host, int port)
    sprintf(client->portBuffer, "%d", port);
 
    if(getaddrinfo(host, client->portBuffer, &hints, &(client->info)) != 0)
-   {
-      free(client);
-      return NULL;
-   }
+      err("Unable to find host %s", host);
 
    if((client->sock = socket(client->info->ai_family, client->info->ai_socktype,
                              client->info->ai_protocol)) == -1)
-   {
-      freeaddrinfo(client->info);
-      free(client);
-      return NULL;
-   }
+      err("Unable to open socket");
 
    return client;
 }
 
-int tcp_client_connect(s_tcp_client* client)
+void tcp_client_connect(s_tcp_client* client)
 {
    if((client->s = tcp_socket_connect(client->sock, client->info)) == NULL)
-      return 1;
+      err("Unable to connect with host %s\n", client->host);
 
    freeaddrinfo(client->info);
-   return 0;
 }
 
 void tcp_client_free(s_tcp_client* client)

@@ -12,8 +12,47 @@
 #include "path.h"
 #include "str.h"
 
+#include "http-client.h"
+#include "http-request.h"
+#include "http-response.h"
+#include "http-server.h"
+
+static void on_request_(s_http_request* req, s_http_response* res)
+{
+   printf("=======Request=======\n");
+
+   printf("Method: %d\n", req->method);
+   printf("Version: %d\n", req->version);
+   printf("Path: %s\n", req->path);
+
+   s_pmap_node* it = pmap_begin(req->headers);
+   while(it != pmap_end(req->headers))
+   {
+      printf("%s => %s\n", (const char*)it->key, (const char*) it->value);
+      it = pmap_next(req->headers, it);
+   }
+
+   if(req->body_buff)
+   {
+      printf("\n\n<BEGIN>");
+      fwrite(req->body_buff, 1, req->body_len, stdout);
+      printf("<END>\n");
+   }
+
+   printf("=====================\n");
+
+   const char* message = "Hello, World !\n";
+   http_response_body_write(res, message, strlen(message));
+}
+
 int main(int argc, char** argv)
 {
+
+   s_http_server* server = http_server_new(on_request_, 3333);
+   http_server_listen(server);
+
+
+   return 0;
 
    vm_args_init(argc, argv);
 

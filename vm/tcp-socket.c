@@ -146,3 +146,99 @@ int tcp_socket_write_string(s_tcp_socket* s, const char* str)
 {
    return tcp_socket_write(s, str, strlen(str) + 1);
 }
+
+int tcp_socket_read_until(s_tcp_socket* s, const char* limit, char** out)
+{
+   int alloc = BUFFER_ALLOC_INIT;
+   int len = 0;
+   char* res = malloc(alloc);
+   char* it = res;
+   const char* limit_it = limit;
+
+   while(1)
+   {
+      if(len > alloc)
+      {
+         alloc *= 2;
+         res = realloc(res, alloc);
+      }
+
+      if(recv(s->sock, it, 1, 0) != 1)
+      {
+         free(res);
+         return -1;
+      }
+
+      ++len;
+
+      if(*it == *limit_it)
+      {
+         ++limit_it;
+         if(*limit_it == '\0')
+            break;
+      }
+      else
+      {
+         char* prev_it = it - (limit_it - limit);
+         char* temp_it;
+         while(prev_it <= it)
+         {
+            limit_it = limit;
+            temp_it = prev_it;
+            while(temp_it <= it && *temp_it == *limit_it)
+            {
+               ++limit_it;
+               ++temp_it;
+            }
+
+            if(temp_it > it)
+               break;
+
+            ++prev_it;
+         }
+      }
+
+      ++it;
+   }
+
+   *out = res;
+   return len;
+}
+
+int tcp_socket_read_all(s_tcp_socket* s, char** out)
+{
+   int n;
+   int alloc = BUFFER_ALLOC_INIT;
+   int len = 0;
+   int to_read = alloc;
+   char* res = malloc(alloc);
+   char* it = res;
+
+   while(1)
+   {
+
+      if((n = recv(s->sock, it, to_read, 0)) == -1)
+      {
+         free(res);
+         return -1;
+      }
+
+      len += n;
+      it += n;
+      to_read -= n;
+
+      if(n == 0)
+         break;
+
+      if(to_read == 0)
+      {
+         alloc *= 2;
+         res = realloc(res, alloc);
+         to_read = alloc - len;
+      }
+
+   }
+
+   *out = res;
+   return len;
+}
